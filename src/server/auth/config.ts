@@ -32,12 +32,13 @@ declare module "next-auth" {
 export const authConfig = {
   providers: [
     /**
-     * Add authentication providers here.
+     * ...add more providers here.
      *
-     * Most providers require credentials from external services.
-     * Refer to the NextAuth.js docs for the provider you want to use.
+     * Most other providers require a bit more work than the Discord provider. For example, the
+     * GitHub provider requires you to add the `refresh_token_expires_in` field to the Account
+     * model. Refer to the NextAuth.js docs for the provider you want to use. Example:
      *
-     * @see https://next-auth.js.org/providers
+     * @see https://next-auth.js.org/providers/github
      */
   ],
   adapter: PrismaAdapter(db),
