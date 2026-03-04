@@ -62,7 +62,7 @@ const ProfilePage: React.FC = () => {
                 const isMyCampaign = owner && owner.toLowerCase() === address.toLowerCase();
 
                 if (donationsResult?.status === 'success') {
-                    const donations = donationsResult.result as any[]; 
+                    const donations = donationsResult.result as unknown as any[]; 
                     for (const donation of donations) {
                         const { donor, amount, timestamp } = donation;
                         const amountBg = amount as bigint;
@@ -151,7 +151,7 @@ const ProfilePage: React.FC = () => {
                         <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-400"><User size={40} /></div>
                         <h2 className="text-2xl font-bold text-aid-dark mb-2">Guest User</h2>
                         <p className="text-gray-600 mb-8">Connect your wallet to view your profile and manage your campaigns.</p>
-                        <WalletWrapper className="w-full bg-aid-dark text-white hover:bg-aid-green transition-all py-3 rounded-xl font-bold shadow-lg" text="Connect Wallet" />
+                        <WalletWrapper className="w-full bg-aid-dark text-white hover:bg-aid-green transition-all py-3 rounded-xl font-bold shadow-lg" />
                     </div>
                 </div>
             ) : (

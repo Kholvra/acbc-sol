@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
+import '@coinbase/onchainkit/styles.css';
 import { baseSepolia } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider, createConfig, http } from 'wagmi';
@@ -24,11 +25,13 @@ export const wagmiConfig = createConfig({
 });
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const apiKey = process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY === 'your-onchainkit-key' ? '' : (process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY ?? '');
+
   return (
     <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <OnchainKitProvider
-          apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
+          apiKey={apiKey}
           chain={baseSepolia}
           config={{
             appearance: {

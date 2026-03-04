@@ -169,7 +169,7 @@ const ViewerOverlay = ({ campaignAddress }: { campaignAddress?: string }) => {
 
     return (
         <div className="fixed inset-0 bg-black z-50">
-             {speakers.length > 0 ? (
+             {speakers.length > 0 && speakers[0] ? (
                  <StreamPlayer participantId={speakers[0].id} />
              ) : (
                  <div className="absolute inset-0 flex items-center justify-center text-white/50 bg-gray-900">
@@ -268,7 +268,7 @@ const ViewerStream = () => {
     const params = useParams();
     const id = params.id as string;
     const searchParams = useSearchParams();
-    const address = searchParams[0].get('address') || undefined;
+    const address = searchParams.get('address') || undefined;
     const [token, setToken] = useState<string>("");
   
     useEffect(() => {
