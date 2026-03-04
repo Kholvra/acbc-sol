@@ -3,4 +3,66 @@
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  --color-aid-yellow: #F0E491;
+  --color-aid-green: #BBC863;
+  --color-aid-dark: #658C58;
+  --color-aid-light: #FCF9E6;
+  --color-aid-offwhite: #F9F9F9;
+
+  --font-heading: "Lato", sans-serif;
+  --font-body: "Open Sans", sans-serif;
+  --font-accent: "Roboto Slab", serif;
+
+  --animate-spin-slow: spin 3s linear infinite;
+}
+
+@layer base {
+  :root {
+    --aid-primary: #F0E491;
+    --aid-secondary: #BBC863;
+    --aid-tertiary: #658C58;
+    --aid-bg: #FFFFFF;
+    --aid-text: #658C58;
+  }
+
+  body {
+    background-color: var(--aid-bg);
+    color: var(--aid-text);
+    font-family: var(--font-body);
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    color: var(--aid-tertiary);
+  }
+
+  [data-ock-theme="custom"] {
+    --ock-bg-primary: var(--aid-secondary);
+    --ock-bg-primary-hover: #aab855;
+    --ock-bg-primary-active: #9ea84d;
+    --ock-text-primary: #ffffff;
+    --ock-bg-default: #ffffff;
+    --ock-bg-secondary: #fafafa;
+    --ock-bg-alternate: var(--aid-primary);
+    --ock-text-foreground: #658C58;
+    --ock-text-foreground-muted: #8ca382;
+    --ock-border-radius: 12px;
+    --ock-border-line: rgba(101, 140, 88, 0.1);
+    --ock-icon-color-primary: var(--aid-secondary);
+  }
+}
+
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+div[data-radix-portal] {
+  z-index: 9999 !important;
 }
