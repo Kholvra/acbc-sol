@@ -2,13 +2,24 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAccount, useDisconnect, useBalance, useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { LogOut, Copy, ExternalLink, User, Wallet, Coins, RefreshCw, Gift, ArrowUpRight, ArrowDownLeft, Check } from 'lucide-react';
+import { LogOut, Copy, ExternalLink, User, Wallet, Coins, ArrowUpRight, ArrowDownLeft, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import WalletWrapper from '~/components/providers/wallet-wrapper';
 import TikTokLayout from '~/components/layout/tiktok-layout';
 import CampaignCreationModal from '~/components/campaign/campaign-creation-modal';
 import { IDRX_ADDRESS, IDRX_ABI, FACTORY_ADDRESS, FACTORY_ABI, CAMPAIGN_ABI } from '~/constants/contracts';
 import { formatEther } from 'viem';
+
+interface DonationHistory {
+  type: 'sent' | 'received';
+  campaignAddress: string;
+  campaignTitle: string;
+  otherParty: string;
+  otherPartyLabel: string;
+  amount: bigint;
+  timestamp: bigint;
+  donor?: string;
+}
 
 const ProfilePage: React.FC = () => {
   const { address, isConnected } = useAccount();
@@ -17,8 +28,8 @@ const ProfilePage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'sent' | 'received'>('sent');
-  const [sentHistory, setSentHistory] = useState<any[]>([]);
-  const [receivedHistory, setReceivedHistory] = useState<any[]>([]);
+  const [sentHistory, setSentHistory] = useState<DonationHistory[]>([]);
+  const [receivedHistory, setReceivedHistory] = useState<DonationHistory[]>([]);
   const [totalDonated, setTotalDonated] = useState<bigint>(0n);
   const [totalReceived, setTotalReceived] = useState<bigint>(0n);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
@@ -31,12 +42,11 @@ const ProfilePage: React.FC = () => {
   });
 
   const { data: campaignsData } = useReadContracts({
-        // @ts-ignore
         contracts: allCampaigns?.flatMap((addr) => [
             { address: addr, abi: CAMPAIGN_ABI, functionName: 'metadata' },
             { address: addr, abi: CAMPAIGN_ABI, functionName: 'owner' },
             { address: addr, abi: CAMPAIGN_ABI, functionName: 'getRecentDonations', args: [BigInt(100)] }
-        ]) || [],
+        ]) ?? [],
         query: { enabled: !!allCampaigns }
   });
 
@@ -44,9 +54,9 @@ const ProfilePage: React.FC = () => {
     const fetchHistory = () => {
         if (!allCampaigns || !address || !campaignsData) return;
         setIsLoadingHistory(true);
-        
-        let sent: any[] = [];
-        let received: any[] = [];
+
+        const sent: DonationHistory[] = [];
+        const received: DonationHistory[] = [];
         let tDonated = 0n;
         let tReceived = 0n;
 
@@ -57,17 +67,17 @@ const ProfilePage: React.FC = () => {
                 const ownerResult = campaignsData[i * 3 + 1];
                 const donationsResult = campaignsData[i * 3 + 2];
 
-                const title = metaResult?.status === 'success' ? (metaResult.result as any)[0] : 'Unknown Campaign';
-                const owner = ownerResult?.status === 'success' ? (ownerResult.result as any) : null;
-                const isMyCampaign = owner && owner.toLowerCase() === address.toLowerCase();
+                const title = metaResult?.status === 'success' ? (metaResult.result as [string, string, bigint, string])[0] : 'Unknown Campaign';
+                const owner = ownerResult?.status === 'success' ? (ownerResult.result as string) : null;
+                const isMyCampaign = owner?.toLowerCase() === address.toLowerCase();
 
                 if (donationsResult?.status === 'success') {
-                    const donations = donationsResult.result as unknown as any[]; 
+                    const donations = donationsResult.result as unknown as DonationHistory[];
                     for (const donation of donations) {
                         const { donor, amount, timestamp } = donation;
-                        const amountBg = amount as bigint;
+                        const amountBg = amount;
 
-                        if (donor && donor.toLowerCase() === address.toLowerCase()) {
+                        if (donor?.toLowerCase() === address.toLowerCase()) {
                             tDonated += amountBg;
                             sent.push({
                                 type: 'sent',
@@ -123,8 +133,8 @@ const ProfilePage: React.FC = () => {
 
   useEffect(() => {
       if (isConfirmed) {
-          toast.success("Faucet Claimed! You received 1,000,000 IDRX.");
-          refetchIdrx();
+          void toast.success("Faucet Claimed! You received 1,000,000 IDRX.");
+          void refetchIdrx();
       }
   }, [isConfirmed, refetchIdrx]);
 
@@ -133,8 +143,8 @@ const ProfilePage: React.FC = () => {
       writeContract({ address: IDRX_ADDRESS, abi: IDRX_ABI, functionName: 'mint', args: [address] });
   };
 
-  const handleCopy = (text: string) => {
-      navigator.clipboard.writeText(text);
+  const handleCopy = async (text: string) => {
+      await navigator.clipboard.writeText(text);
       setCopiedAddress(text);
       toast.success("Address copied");
       setTimeout(() => setCopiedAddress(null), 2000);
@@ -177,7 +187,7 @@ const ProfilePage: React.FC = () => {
                                 </div>
                                 <div className="flex flex-col gap-2 text-right md:w-auto w-full">
                                     <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100"><div className="text-xs text-gray-400 font-bold uppercase mb-1">Native Balance</div><div className="text-xl font-heading font-black text-aid-dark flex items-center gap-1 justify-end"><Wallet size={16}/>{ethBalance ? `${parseFloat(ethBalance.formatted).toFixed(4)} ETH` : '...'}</div></div>
-                                    <div className="bg-aid-green/10 p-4 rounded-2xl border border-aid-green/20"><div className="text-xs text-aid-green font-bold uppercase mb-1">IDRX Balance</div><div className="text-2xl font-heading font-black text-aid-dark flex items-center gap-1 justify-end"><Coins size={20}/>{idrxBalance !== undefined ? `IDRX ${Number(formatEther(idrxBalance as bigint)).toLocaleString('id-ID')}` : 'Loading...'}</div></div>
+                                    <div className="bg-aid-green/10 p-4 rounded-2xl border border-aid-green/20"><div className="text-xs text-aid-green font-bold uppercase mb-1">IDRX Balance</div><div className="text-2xl font-heading font-black text-aid-dark flex items-center gap-1 justify-end"><Coins size={20}/>{idrxBalance !== undefined ? `IDRX ${Number(formatEther(idrxBalance)).toLocaleString('id-ID')}` : 'Loading...'}</div></div>
                                 </div>
                             </div>
 
@@ -203,7 +213,7 @@ const ProfilePage: React.FC = () => {
                                 </div>
                                 {isLoadingHistory ? <div className="text-gray-500 italic py-8 text-center">Loading blockchain history...</div> : currentHistory.length > 0 ? (
                                     <div className="space-y-3">
-                                        {currentHistory.map((item: any, index: number) => (
+                                        {currentHistory.map((item: DonationHistory, index: number) => (
                                             <div key={index} className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 group hover:border-aid-green/30 transition-colors">
                                                 <div className="flex items-center gap-4">
                                                     <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${activeTab === 'sent' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'}`}>{activeTab === 'sent' ? <ArrowUpRight size={24} /> : <ArrowDownLeft size={24} />}</div>

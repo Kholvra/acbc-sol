@@ -38,13 +38,12 @@ const MyActivityPage: React.FC = () => {
     });
 
     const { data: campaignsData } = useReadContracts({
-        // @ts-ignore
         contracts: campaignAddresses?.flatMap((addr) => [
             { address: addr, abi: CAMPAIGN_ABI, functionName: 'metadata' },
             { address: addr, abi: CAMPAIGN_ABI, functionName: 'totalRaised' },
             { address: addr, abi: CAMPAIGN_ABI, functionName: 'owner' },
             { address: addr, abi: CAMPAIGN_ABI, functionName: 'isActive' },
-        ]) || [],
+        ]) ?? [],
         query: {
             enabled: !!campaignAddresses && campaignAddresses.length > 0
         }
@@ -75,20 +74,20 @@ const MyActivityPage: React.FC = () => {
                     const owner = ownerResult.result as string;
                     if (owner.toLowerCase() !== userAddress.toLowerCase()) return;
 
-                    const meta = metaResult.result as any;
+                    const meta = metaResult.result as [string, string, bigint, string];
                     const descriptionIPFS = meta[1];
                     const active = activeResult?.status === 'success' ? (activeResult.result as boolean) : true;
 
                     let mediaUrl = '';
-                    let title = meta[0];
+                    const title = meta[0];
                     let endDate = undefined;
                     
-                    if (descriptionIPFS && descriptionIPFS.startsWith('ipfs://')) {
+                    if (descriptionIPFS?.startsWith('ipfs://')) {
                          try {
-                             const data = await fetchJSONFromIPFS(descriptionIPFS);
+                             const data = await fetchJSONFromIPFS(descriptionIPFS) as { animation_url?: string; video?: string; image?: string; properties?: { endDate?: string } } | null;
                              if (data) {
-                                 mediaUrl = data.animation_url || data.video || data.image;
-                                 if (data.properties && data.properties.endDate) {
+                                 mediaUrl = data.animation_url ?? data.video ?? data.image ?? '';
+                                 if (data.properties?.endDate) {
                                      endDate = data.properties.endDate;
                                  }
                              }
@@ -114,7 +113,7 @@ const MyActivityPage: React.FC = () => {
             setIsLoading(false);
         };
 
-        loadCampaigns();
+        void loadCampaigns();
     }, [campaignsData, campaignAddresses, userAddress]);
 
     const handleDelete = (campaign: Campaign) => {
@@ -127,7 +126,7 @@ const MyActivityPage: React.FC = () => {
         if (isDeleteConfirmed && isDeleting) {
              const campaign = myCampaigns.find(c => c.address === isDeleting);
              if (campaign) {
-                 unpinJSONFromIPFS(campaign.description).then(() => {
+                 void unpinJSONFromIPFS(campaign.description).then(() => {
                      toast.success("Campaign deleted & assets removed!");
                      setIsDeleting(null);
                      setMyCampaigns(prev => prev.map(c => c.address === isDeleting ? { ...c, isActive: false } : c));
@@ -160,7 +159,7 @@ const MyActivityPage: React.FC = () => {
                                 { id: 'completed', label: 'History / Completed' },
                                 { id: 'all', label: 'All Reels' }
                             ].map(tab => (
-                                <button key={tab.id} onClick={() => setFilter(tab.id as any)} className={`pb-2 px-1 font-bold text-sm whitespace-nowrap ${filter === tab.id ? 'text-aid-green border-b-2 border-aid-green' : 'text-gray-400'}`}>
+                                <button key={tab.id} onClick={() => setFilter(tab.id as 'all' | 'active' | 'completed')} className={`pb-2 px-1 font-bold text-sm whitespace-nowrap ${filter === tab.id ? 'text-aid-green border-b-2 border-aid-green' : 'text-gray-400'}`}>
                                     {tab.label}
                                 </button>
                             ))}

@@ -1,17 +1,15 @@
 import { SignJWT } from 'jose';
 
 // VideoSDK Utilities
-export const generateVideoSDKToken = async () => {
+export const generateVideoSDKToken = async (): Promise<string | null> => {
   const API_KEY = process.env.NEXT_PUBLIC_VIDEOSDK_API_KEY;
-  const SECRET_KEY = process.env.VIDEOSDK_SECRET_KEY; // Note: Use Server-side secret if called from Server Action
+  const SECRET_KEY = process.env.VIDEOSDK_SECRET_KEY;
 
   if (!API_KEY) {
       console.error("VideoSDK API Key not found in env");
       return null;
   }
 
-  // If this is client-side, we might need a server action later. 
-  // For now, keeping the structure compatible.
   if (!SECRET_KEY) {
       console.error("VideoSDK Secret Key missing (required for signing)");
       return null;
@@ -21,7 +19,7 @@ export const generateVideoSDKToken = async () => {
 
   const token = await new SignJWT({
       apikey: API_KEY,
-      permissions: ['allow_join', 'allow_mod'], 
+      permissions: ['allow_join', 'allow_mod'],
       version: 2,
   })
   .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
@@ -32,6 +30,9 @@ export const generateVideoSDKToken = async () => {
   return token;
 };
 
+// Alias for backwards compatibility
+export const generateToken = generateVideoSDKToken;
+
 export const createMeeting = async (token: string) => {
   const res = await fetch(`https://api.videosdk.live/v2/rooms`, {
     method: "POST",
@@ -41,12 +42,12 @@ export const createMeeting = async (token: string) => {
     },
     body: JSON.stringify({}),
   });
-  
+
   if (!res.ok) {
     throw new Error("Failed to create meeting");
   }
-  
-  const { roomId } = await res.json();
+
+  const { roomId } = await res.json() as { roomId: string };
   return roomId;
 };
 
