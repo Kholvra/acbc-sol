@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { OnchainKitProvider } from '@coinbase/onchainkit';
-import '@coinbase/onchainkit/styles.css';
 import { baseSepolia } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider, createConfig, http } from 'wagmi';

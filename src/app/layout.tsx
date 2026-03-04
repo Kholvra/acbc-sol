@@ -1,3 +1,4 @@
+import "@coinbase/onchainkit/styles.css";
 import "~/styles/globals.css";
 
 import { type Metadata } from "next";
@@ -15,7 +16,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className="antialiased">
+      <body className="antialiased selection:bg-aid-yellow selection:text-aid-dark">
         <TRPCReactProvider>
           <Providers>
             {children}

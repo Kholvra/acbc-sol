@@ -13,6 +13,19 @@ interface CampaignCardProps {
   address: string;
 }
 
+interface OffchainMetadata {
+  name?: string;
+  description?: string;
+  image?: string;
+  animation_url?: string;
+  properties?: {
+    province?: string;
+    endDate?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
   const router = useRouter();
   const { address: userAddress } = useAccount();
@@ -54,12 +67,12 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
   useEffect(() => {
     if (isConfirmed) {
         if (step === 'approving') {
-            toast.success("Approval Successful!", { description: "Now click Donate to complete." });
-            refetchAllowance();
+            void toast.success("Approval Successful!", { description: "Now click Donate to complete." });
+            void refetchAllowance();
             setStep('ready');
         } else if (step === 'donating') {
-            toast.success("Donation Successful!", { description: "Thank you for your contribution." });
-            refetchTotalRaised();
+            void toast.success("Donation Successful!", { description: "Thank you for your contribution." });
+            void refetchTotalRaised();
             setStep('idle');
             setDonationAmount('');
             setIsDonating(false);
@@ -67,7 +80,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
         }
     }
     if (txError) {
-        toast.error("Transaction Failed");
+        void toast.error("Transaction Failed");
         setStep('idle');
     }
   }, [isConfirmed, step, refetchAllowance, refetchTotalRaised, txError]);
@@ -77,7 +90,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
       if (!donationAmount) return;
       
       const amountBigInt = parseEther(donationAmount);
-      const currentAllowance = allowance as bigint || BigInt(0);
+      const currentAllowance = allowance ?? BigInt(0);
 
       if (step === 'ready' || currentAllowance >= amountBigInt) {
             setStep('donating');
@@ -98,15 +111,23 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
       }
   };
 
-  const [offchainData, setOffchainData] = React.useState<any>(null);
-  // @ts-ignore
-  const [title, description, targetAmount, category] = metadata || ['', '', BigInt(0), ''];
-  const isIPFS = (description as string)?.startsWith('ipfs://');
+  // State for off-chain metadata
+  const [offchainData, setOffchainData] = React.useState<OffchainMetadata | null>(null);
+  
+  // Type-safe metadata parsing
+  const [title, description, targetAmount, category] = metadata
+    ? (metadata as [string, string, bigint, string])
+    : ['', '', BigInt(0), ''];
+  const isIPFS = description?.startsWith('ipfs://');
 
   useEffect(() => {
     if (isIPFS && description) {
-        fetchJSONFromIPFS(description as string).then(data => {
-            if (data) setOffchainData(data);
+        void fetchJSONFromIPFS(description).then((data: unknown) => {
+            if (data && typeof data === 'object') {
+                setOffchainData(data as OffchainMetadata);
+            }
+        }).catch((err: unknown) => {
+            console.error('Failed to fetch IPFS metadata:', err);
         });
     }
   }, [description, isIPFS]);
@@ -121,19 +142,19 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
 
   if (!metadata) return null;
 
-  const raised = totalRaised ? formatEther(totalRaised as bigint) : '0';
-  const target = targetAmount ? formatEther(targetAmount as bigint) : '0';
+  const raised = totalRaised ? formatEther(totalRaised) : '0';
+  const target = targetAmount ? formatEther(targetAmount) : '0';
   const progress = Math.min((Number(raised) / Number(target)) * 100, 100);
 
-  const displayDescription = offchainData?.description || (isIPFS ? "Loading details..." : description);
-  const displayTitle = offchainData?.name || title;
+  const displayDescription = offchainData?.description ?? (isIPFS ? "Loading details..." : description);
+  const displayTitle = offchainData?.name ?? title;
 
   const getButtonText = () => {
       if (isPending || isConfirming) return <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />;
       if (!donationAmount) return 'Enter Amount';
       if (step === 'ready') return 'Step 2/2: Donate';
       const val = parseEther(donationAmount);
-      const allow = allowance as bigint || BigInt(0);
+      const allow = allowance ?? BigInt(0);
       if (allow < val) return 'Step 1/2: Approve';
       return 'Step 2/2: Donate';
   };
@@ -143,7 +164,9 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
             if (isPlaying) {
                 videoRef.current.pause();
             } else {
-                videoRef.current.play();
+                void videoRef.current.play().catch((err: unknown) => {
+                    console.error('Video play error:', err);
+                });
             }
             setIsPlaying(!isPlaying);
         }
@@ -159,20 +182,27 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
     const handleShare = async () => {
         try {
             await navigator.clipboard.writeText(window.location.href);
-            toast.success("Link copied to clipboard!"); 
+            toast.success("Link copied to clipboard!");
         } catch (err) {
             console.error('Failed to copy', err);
+            toast.error('Failed to copy link');
         }
     };
 
   return (
     <div className="relative h-screen md:h-full w-full bg-black md:bg-white md:rounded-3xl overflow-hidden snap-start flex-shrink-0 shadow-lg md:border border-aid-green/10">
         
-        <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden" onClick={(e) => {
-            if (offchainData?.animation_url?.startsWith('live://')) {
+        <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden" onClick={async (e) => {
+            const animationUrl = offchainData?.animation_url;
+            if (animationUrl?.startsWith('live://')) {
                 e.stopPropagation();
-                const meetingId = offchainData.animation_url.replace('live://', '');
-                router.push(`/live/view/${meetingId}`); 
+                const meetingId = animationUrl.replace('live://', '');
+                try {
+                    router.push(`/live/view/${meetingId}`);
+                } catch (err) {
+                    console.error('Navigation failed:', err);
+                    toast.error('Failed to open live stream');
+                }
                 return;
             }
             togglePlay();
@@ -234,7 +264,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
                  </div>
                  <span className="text-xs font-bold text-white drop-shadow-md">{isMuted ? 'Muted' : 'Sound'}</span>
             </button>
-            <button onClick={(e) => { e.stopPropagation(); handleShare(); }} className="flex flex-col items-center gap-1 group">
+            <button onClick={async (e) => { e.stopPropagation(); await handleShare(); }} className="flex flex-col items-center gap-1 group">
                  <div className="w-10 h-10 bg-white/20 hover:bg-white/40 backdrop-blur-md rounded-full flex items-center justify-center transition-all shadow-sm border border-white/30">
                     <Share2 size={22} className="text-white" />
                  </div>
@@ -295,7 +325,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
                     <div className="mb-2 shrink-0"> 
                         <div className="flex flex-wrap gap-2 mb-2">
                             <span className="bg-aid-yellow/90 text-aid-dark text-[10px] font-bold px-2 py-0.5 rounded-full border border-aid-green/20 uppercase tracking-wider shadow-sm whitespace-nowrap">
-                                {category as string}
+                                {category}
                             </span>
                             {offchainData?.properties?.province && (
                                 <span className="bg-blue-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-white/20 uppercase tracking-wider shadow-sm flex items-center gap-1 whitespace-nowrap">
@@ -305,7 +335,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
                         </div>
                              
                         <h3 className={`text-white font-heading font-black leading-tight drop-shadow-md transition-all w-full ${isExpanded ? 'text-2xl' : 'text-xl'}`}>
-                            {displayTitle as string || `@${address.slice(0, 6)}...`}
+                            {displayTitle || `@${address.slice(0, 6)}...`}
                         </h3>
                         
                         {offchainData?.properties?.endDate && (
@@ -323,7 +353,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
                          <div className="bg-[#BBC863] text-white rounded-xl p-4 mt-1 mb-2 shadow-sm flex-1 overflow-y-auto custom-scrollbar">
                              <p className="font-bold mb-1 block sticky top-0 bg-[#BBC863] pb-1">Description Campaign:</p>
                              <div className="font-body leading-relaxed text-sm whitespace-pre-wrap">
-                                {displayDescription as string}
+                                {displayDescription}
                              </div>
                          </div>
                     </div>

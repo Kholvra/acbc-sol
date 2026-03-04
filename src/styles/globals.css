@@ -37,6 +37,7 @@
     color: var(--aid-tertiary);
   }
 
+  /* Custom Theme buat Modal - Sama dengan original */
   [data-ock-theme="custom"] {
     --ock-bg-primary: var(--aid-secondary);
     --ock-bg-primary-hover: #aab855;
