@@ -17,14 +17,14 @@ const ParticipantView = ({ participantId }: { participantId: string }) => {
 
   useEffect(() => {
     if (videoRef.current) {
-      if (webcamOn && webcamStream && webcamStream.track) {
+      if (webcamOn && webcamStream?.track) {
         try {
           const mediaStream = new MediaStream();
           mediaStream.addTrack(webcamStream.track);
           videoRef.current.srcObject = mediaStream;
           videoRef.current.play()
             .then(() => setIsLoading(false))
-            .catch((error) => {
+            .catch((error: Error) => {
               if (error.name !== 'AbortError') console.warn("Video play error:", error.name);
             });
         } catch (err) {
@@ -38,11 +38,11 @@ const ParticipantView = ({ participantId }: { participantId: string }) => {
   }, [webcamStream, webcamOn]);
 
   useEffect(() => {
-    if (micOn && micStream && micStream.track && !isLocal) {
+    if (micOn && micStream?.track && !isLocal) {
       try {
         const audio = new Audio();
         audio.srcObject = new MediaStream([micStream.track]);
-        audio.play().catch(() => {});
+        void audio.play().catch((error: Error) => console.warn("Audio play error:", error.name));
       } catch (err) {
         console.warn("Error setting audio stream:", err);
       }
@@ -61,7 +61,20 @@ const ParticipantView = ({ participantId }: { participantId: string }) => {
   );
 };
 
-const Controls = ({ onLeave, micOn, webcamOn, toggleMic, toggleWebcam }: any) => {
+interface CampaignMetadata {
+  name?: string;
+  description?: string;
+  properties?: {
+    location?: {
+      formatted?: string;
+    };
+    province?: string;
+    target?: bigint;
+  };
+  [key: string]: unknown;
+}
+
+const Controls = ({ onLeave, micOn, webcamOn, toggleMic, toggleWebcam }: { onLeave: () => void; micOn: boolean; webcamOn: boolean; toggleMic: () => void; toggleWebcam: () => void }) => {
     return (
         <div className="flex gap-6 items-center justify-center p-6 w-full absolute bottom-8 z-30">
             <button onClick={() => toggleMic()} className={`p-4 rounded-full transition-all border-2 backdrop-blur-md shadow-lg ${micOn ? 'bg-black/40 border-white/20 hover:bg-black/60' : 'bg-[#BBC863] hover:bg-[#AAB752] border-[#BBC863]'}`}>
@@ -87,12 +100,12 @@ const MeetingView = ({ meetingId }: { meetingId: string }) => {
     const localSpeaker = speakers.find(p => p.local);
 
     const [campaignAddress, setCampaignAddress] = useState<string | null>(null);
-    const [campaignMetadata, setCampaignMetadata] = useState<any>(null);
+    const [campaignMetadata, setCampaignMetadata] = useState<CampaignMetadata | null>(null);
     const [donationNotification, setDonationNotification] = useState<string | null>(null);
 
     const { data: allCampaigns } = useReadContract({ address: FACTORY_ADDRESS, abi: FACTORY_ABI, functionName: 'getCampaigns' });
     const { data: allMetadata } = useReadContracts({
-        contracts: allCampaigns?.map((addr) => ({ address: addr, abi: CAMPAIGN_ABI, functionName: 'metadata' })) || [],
+        contracts: allCampaigns?.map((addr) => ({ address: addr, abi: CAMPAIGN_ABI, functionName: 'metadata' })) ?? [],
         query: { enabled: !!allCampaigns }
     });
 
@@ -102,21 +115,21 @@ const MeetingView = ({ meetingId }: { meetingId: string }) => {
             for (let i = 0; i < allCampaigns.length; i++) {
                 const result = allMetadata[i];
                 if (result?.status === 'success') {
-                    const metaArray = result.result as any;
+                    const metaArray = result.result as [string, string, bigint, string];
                     if (metaArray[1].startsWith('ipfs://')) {
                          try {
-                             const data = await fetchJSONFromIPFS(metaArray[1]);
-                             if (data.animation_url === `live://${meetingId}`) {
+                             const data = await fetchJSONFromIPFS(metaArray[1]) as { animation_url?: string; properties?: { location?: { formatted?: string } } } | null;
+                             if (data?.animation_url === `live://${meetingId}`) {
                                  setCampaignAddress(allCampaigns[i] as string);
-                                 setCampaignMetadata({ title: metaArray[0], location: data.properties.location?.formatted || 'Live Location', target: metaArray[2] });
+                                 setCampaignMetadata({ name: metaArray[0], description: metaArray[1], properties: { location: { formatted: data.properties?.location?.formatted ?? 'Live Location' } } });
                                  break;
                              }
-                         } catch (e) {}
+                         } catch (e) { console.error(e); }
                     }
                 }
             }
         };
-        findCampaign();
+        void findCampaign();
     }, [allCampaigns, allMetadata, meetingId]);
 
     useWatchContractEvent({
@@ -124,19 +137,19 @@ const MeetingView = ({ meetingId }: { meetingId: string }) => {
         abi: CAMPAIGN_ABI,
         eventName: 'DonationReceived',
         onLogs(logs) {
-            const log = logs[0] as any;
-            if (log.args) {
+            const log = logs[0] as { args?: { donor?: string; amount?: bigint } };
+            if (log.args?.donor && log.args?.amount) {
                 const { donor, amount } = log.args;
-                setDonationNotification(`💸 ${donor.substring(0, 6)}... sent IDRX ${Number(formatEther(amount)).toLocaleString('id-ID')}!`);
-                setTimeout(() => setDonationNotification(null), 5000);
+                void setDonationNotification(`💸 ${donor.substring(0, 6)}... sent IDRX ${Number(formatEther(amount)).toLocaleString('id-ID')}!`);
+                setTimeout(() => void setDonationNotification(null), 5000);
             }
         },
         enabled: !!campaignAddress
     });
     
     const { data: totalRaised } = useReadContract({ address: campaignAddress as `0x${string}`, abi: CAMPAIGN_ABI, functionName: 'totalRaised', query: { enabled: !!campaignAddress, refetchInterval: 5000 } });
-    const raised = totalRaised ? formatEther(totalRaised as bigint) : '0';
-    const target = campaignMetadata ? formatEther(campaignMetadata.target) : '1';
+    const raised = totalRaised ? formatEther(totalRaised) : '0';
+    const target = campaignMetadata?.properties?.target ? formatEther(campaignMetadata.properties.target) : '1';
     const progress = Math.min((Number(raised) / Number(target)) * 100, 100);
 
     const { writeContract, data: endTxHash, isPending: isEndingLive } = useWriteContract();
@@ -154,9 +167,9 @@ const MeetingView = ({ meetingId }: { meetingId: string }) => {
             writeContract({ address: campaignAddress as `0x${string}`, abi: CAMPAIGN_ABI, functionName: 'cancel' });
         } else {
             leave();
-            router.push('/live');
+            void router.push('/live');
         }
-    }
+    };
 
     return (
         <div className="fixed inset-0 bg-gray-950 flex flex-col">
@@ -169,7 +182,7 @@ const MeetingView = ({ meetingId }: { meetingId: string }) => {
                                 <div className="w-2 h-2 rounded-full bg-[#658C58]" />
                                 <span className="text-xs font-black uppercase tracking-widest">ON AIR</span>
                             </div>
-                            {campaignMetadata && <div className="bg-black/40 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 w-fit flex items-center gap-1 text-white/80"><MapPin size={12}/> <span className="text-xs font-bold">{campaignMetadata.location}</span></div>}
+                            {campaignMetadata && <div className="bg-black/40 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 w-fit flex items-center gap-1 text-white/80"><MapPin size={12}/> <span className="text-xs font-bold">{String(campaignMetadata.properties?.location?.formatted ?? 'Live Location')}</span></div>}
                          </div>
                          <div className="bg-black/40 backdrop-blur-md text-white px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/10"><Users size={14} /> <span className="text-xs font-bold">128</span></div>
                     </div>
@@ -196,7 +209,7 @@ const BroadcasterStream = () => {
   const [token, setToken] = useState<string>("");
 
   useEffect(() => {
-      generateVideoSDKToken().then(t => setToken(t || ""));
+      void generateVideoSDKToken().then(t => setToken(t ?? ""));
   }, []);
 
   if (!token || !id) return <div className="h-screen flex items-center justify-center bg-black text-white">Initializing Studio...</div>;

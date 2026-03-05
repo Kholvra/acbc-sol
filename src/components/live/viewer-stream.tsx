@@ -18,14 +18,14 @@ const StreamPlayer = ({ participantId }: { participantId: string }) => {
 
   useEffect(() => {
     if (videoRef.current) {
-      if (webcamOn && webcamStream && webcamStream.track) {
+      if (webcamOn && webcamStream?.track) {
         try {
           const mediaStream = new MediaStream();
           mediaStream.addTrack(webcamStream.track);
           videoRef.current.srcObject = mediaStream;
           videoRef.current.play()
             .then(() => setIsLoading(false))
-            .catch((error) => {
+            .catch((error: Error) => {
               if (error.name !== 'AbortError') console.warn("Video play error:", error.name);
             });
         } catch (err) {
@@ -58,19 +58,32 @@ const StreamPlayer = ({ participantId }: { participantId: string }) => {
   );
 };
 
+interface CampaignMetadata {
+  name?: string;
+  description?: string;
+  properties?: {
+    location?: {
+      formatted?: string;
+    };
+    province?: string;
+  };
+  target?: bigint;
+  [key: string]: unknown;
+}
+
 const ViewerOverlay = ({ campaignAddress }: { campaignAddress?: string }) => {
     const { participants, leave, join, meetingId } = useMeeting();
     const router = useRouter();
-    
+
     useEffect(() => {
         if (!meetingId) join();
     }, [meetingId, join]);
-    
+
     const speakers = [...participants.values()].filter(p => p.mode === "SEND_AND_RECV");
     const { address: userAddress, chain } = useAccount();
     const { switchChain } = useSwitchChain();
-    
-    const [metadata, setMetadata] = useState<any>(null);
+
+    const [metadata, setMetadata] = useState<CampaignMetadata | null>(null);
     const [location, setLocation] = useState<string>('Unknown Location');
     const [donationNotification, setDonationNotification] = useState<string | null>(null);
     const [isDonationSheetOpen, setIsDonationSheetOpen] = useState(false);
@@ -103,11 +116,14 @@ const ViewerOverlay = ({ campaignAddress }: { campaignAddress?: string }) => {
 
     useEffect(() => {
         if (contractMetadata) {
-            const meta = contractMetadata as any;
-            setMetadata({ title: meta[0], target: meta[2] });
+            const meta = contractMetadata as [string, string, bigint, string];
+            setMetadata({ name: meta[0], description: meta[1], target: meta[2] });
             if (meta[1].startsWith('ipfs://')) {
-                fetchJSONFromIPFS(meta[1]).then(data => {
-                    if (data?.properties) setLocation(data.properties.location?.formatted || data.properties.province || 'Live Location');
+                void fetchJSONFromIPFS(meta[1]).then((data: unknown) => {
+                    if (data && typeof data === 'object' && 'properties' in data) {
+                        const props = data.properties as { location?: { formatted?: string }; province?: string };
+                        setLocation(props.location?.formatted ?? props.province ?? 'Live Location');
+                    }
                 });
             }
         }
@@ -116,12 +132,12 @@ const ViewerOverlay = ({ campaignAddress }: { campaignAddress?: string }) => {
     useEffect(() => {
         if (isConfirmed) {
             if (donationStep === 'approving') {
-                toast.success("Approved! Now click Donate.");
-                refetchAllowance();
+                void toast.success("Approved! Now click Donate.");
+                void refetchAllowance();
                 setDonationStep('ready');
             } else if (donationStep === 'donating') {
-                toast.success("Donation Sent!");
-                refetchRaised();
+                void toast.success("Donation Sent!");
+                void refetchRaised();
                 setDonationStep('idle');
                 setIsDonationSheetOpen(false);
                 setDonationAmount('');
@@ -134,14 +150,14 @@ const ViewerOverlay = ({ campaignAddress }: { campaignAddress?: string }) => {
         abi: CAMPAIGN_ABI,
         eventName: 'DonationReceived',
         onLogs(logs) {
-            const log = logs[0] as any;
-            if (log.args) {
+            const log = logs[0] as { args?: { donor?: string; amount?: bigint } };
+            if (log.args?.donor && log.args?.amount) {
                 const { donor, amount } = log.args;
                 const formattedAmount = Number(formatEther(amount)).toLocaleString('id-ID');
                 const donorName = `${donor.substring(0, 6)}...${donor.substring(donor.length - 4)}`;
-                setDonationNotification(`💸 ${donorName} donated IDRX ${formattedAmount}!`);
-                refetchRaised();
-                setTimeout(() => setDonationNotification(null), 5000);
+                void setDonationNotification(`💸 ${donorName} donated IDRX ${formattedAmount}!`);
+                void refetchRaised();
+                setTimeout(() => void setDonationNotification(null), 5000);
             }
         },
     });
@@ -153,7 +169,7 @@ const ViewerOverlay = ({ campaignAddress }: { campaignAddress?: string }) => {
             return;
         }
         const amount = parseEther(donationAmount);
-        const currentAllowance = allowance as bigint || BigInt(0);
+        const currentAllowance = allowance ?? BigInt(0);
         if (donationStep === 'ready' || currentAllowance >= amount) {
              setDonationStep('donating');
              writeContract({ address: campaignAddress as `0x${string}`, abi: CAMPAIGN_ABI, functionName: 'donate', args: [amount] });
@@ -163,7 +179,7 @@ const ViewerOverlay = ({ campaignAddress }: { campaignAddress?: string }) => {
         }
     };
 
-    const raised = totalRaised ? formatEther(totalRaised as bigint) : '0';
+    const raised = totalRaised ? formatEther(totalRaised) : '0';
     const target = metadata?.target ? formatEther(metadata.target) : '1';
     const progress = Math.min((Number(raised) / Number(target)) * 100, 100);
 
@@ -211,7 +227,7 @@ const ViewerOverlay = ({ campaignAddress }: { campaignAddress?: string }) => {
                              </span>
                          </div>
                          <h2 className="text-white font-heading font-black text-xl leading-tight drop-shadow-md">
-                             {metadata?.title || 'Loading Campaign...'}
+                             {metadata?.name ?? 'Loading Campaign...'}
                          </h2>
                      </div>
 
@@ -268,11 +284,11 @@ const ViewerStream = () => {
     const params = useParams();
     const id = params.id as string;
     const searchParams = useSearchParams();
-    const address = searchParams.get('address') || undefined;
+    const address = searchParams.get('address') ?? undefined;
     const [token, setToken] = useState<string>("");
-  
+
     useEffect(() => {
-        generateVideoSDKToken().then(t => setToken(t || ""));
+        void generateVideoSDKToken().then(t => setToken(t ?? ""));
     }, []);
   
     if (!token || !id) return <div className="h-screen flex items-center justify-center bg-black text-white">Loading Viewer...</div>;

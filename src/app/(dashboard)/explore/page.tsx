@@ -67,9 +67,19 @@ const getStandardProvinceName = (rawName: string) => {
     return toTitleCase(rawName);
 };
 
+interface GeoJsonData {
+  type: string;
+  features: {
+    type: string;
+    properties: Record<string, unknown>;
+    geometry: Record<string, unknown>;
+  }[];
+  [key: string]: unknown;
+}
+
 const ExplorePage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [geoJsonData, setGeoJsonData] = useState<any>(null);
+  const [geoJsonData, setGeoJsonData] = useState<GeoJsonData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [provinceCampaignCounts, setProvinceCampaignCounts] = useState<Record<string, number>>({});
   const [stats, setStats] = useState({
@@ -86,15 +96,14 @@ const ExplorePage: React.FC = () => {
   });
 
   const { data: campaignsData } = useReadContracts({
-    // @ts-ignore
     contracts: campaignAddresses?.flatMap((addr) => [
-      { address: addr as `0x${string}`, abi: CAMPAIGN_ABI, functionName: 'metadata' },
-      { address: addr as `0x${string}`, abi: CAMPAIGN_ABI, functionName: 'totalRaised' },
-      { address: addr as `0x${string}`, abi: CAMPAIGN_ABI, functionName: 'isActive' }
-    ]) || [],
+      { address: addr, abi: CAMPAIGN_ABI, functionName: 'metadata' },
+      { address: addr, abi: CAMPAIGN_ABI, functionName: 'totalRaised' },
+      { address: addr, abi: CAMPAIGN_ABI, functionName: 'isActive' }
+    ]) ?? [],
     query: {
         enabled: !!campaignAddresses && campaignAddresses.length > 0,
-        refetchInterval: 10000 
+        refetchInterval: 10000
     }
   });
 
@@ -117,9 +126,9 @@ const ExplorePage: React.FC = () => {
                 const isActive = activeResult?.status === 'success' ? (activeResult.result as boolean) : true;
                 if (!isActive) continue;
 
-                const meta = metaResult.result as any;
+                const meta = metaResult.result as [string, string, bigint, string];
                 const description = meta[1];
-                const targetAmount = meta[2] as bigint;
+                const targetAmount = meta[2];
                 const totalRaised = raisedResult.result as bigint;
 
                 if (totalRaised >= targetAmount) continue;
@@ -127,13 +136,13 @@ const ExplorePage: React.FC = () => {
                 totalActive++;
                 totalIdrxRaised += Number(formatEther(totalRaised));
 
-                if (description && description.startsWith('ipfs://')) {
+                if (description?.startsWith('ipfs://')) {
                     promises.push((async () => {
                         try {
-                            const data = await fetchJSONFromIPFS(description);
-                            if (data && data.properties && data.properties.province) {
+                            const data = await fetchJSONFromIPFS(description) as { properties?: { province?: string } } | null;
+                            if (data?.properties?.province) {
                                 const stdName = getStandardProvinceName(data.properties.province);
-                                counts[stdName] = (counts[stdName] || 0) + 1;
+                                counts[stdName] = (counts[stdName] ?? 0) + 1;
                             }
                         } catch (err) {
                             console.error("Error fetching IPFS for map:", err);
@@ -152,14 +161,14 @@ const ExplorePage: React.FC = () => {
         });
     };
 
-    fetchLocations();
+    void fetchLocations();
   }, [campaignsData, campaignAddresses]);
 
   useEffect(() => {
     fetch('/data/indonesia-provinces.geojson')
       .then(res => res.json())
       .then(data => {
-        setGeoJsonData(data);
+        setGeoJsonData(data as GeoJsonData);
         setIsLoading(false);
       })
       .catch(err => {
