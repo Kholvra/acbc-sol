@@ -5,7 +5,11 @@ const pinata = new PinataSDK({
   pinataGateway: process.env.NEXT_PUBLIC_GATEWAY_URL,
 });
 
-export const uploadJSONToIPFS = async (metadata: any) => {
+interface IPFSResponse {
+  IpfsHash: string;
+}
+
+export const uploadJSONToIPFS = async (metadata: Record<string, unknown>) => {
   try {
     const res = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
       method: 'POST',
@@ -15,12 +19,12 @@ export const uploadJSONToIPFS = async (metadata: any) => {
       },
       body: JSON.stringify(metadata)
     });
-    
+
     if (!res.ok) {
         throw new Error(`Pinata JSON upload failed: ${res.statusText}`);
     }
-    
-    const data = await res.json();
+
+    const data = await res.json() as IPFSResponse;
     return data.IpfsHash;
   } catch (error) {
     console.error("Error uploading JSON to IPFS:", error);
@@ -58,13 +62,13 @@ export const uploadFileToIPFS = async (file: File) => {
                  throw new Error(`Pinata File upload failed: ${res.status} ${res.statusText} - ${text}`);
             }
 
-            const data = await res.json();
+            const data = await res.json() as IPFSResponse;
             return data.IpfsHash;
         } catch (error) {
             console.error(`Attempt ${attempt + 1} failed:`, error);
             attempt++;
             if (attempt === MAX_RETRIES) throw error;
-            await wait(1000 * attempt); 
+            await wait(1000 * attempt);
         }
     }
 };
@@ -72,10 +76,10 @@ export const uploadFileToIPFS = async (file: File) => {
 export const fetchJSONFromIPFS = async (ipfsUri: string) => {
     try {
         const hash = ipfsUri.replace("ipfs://", "");
-        const gateway = process.env.NEXT_PUBLIC_GATEWAY_URL || "https://gateway.pinata.cloud";
+        const gateway = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "https://gateway.pinata.cloud";
         const res = await fetch(`${gateway}/ipfs/${hash}`);
         if (!res.ok) throw new Error("Failed to fetch IPFS data");
-        return await res.json();
+        return await res.json() as Record<string, unknown>;
     } catch (error) {
         console.error(error);
         return null;

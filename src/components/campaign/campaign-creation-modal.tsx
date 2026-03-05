@@ -81,7 +81,7 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
             name: formData.title,
             description: formData.description,
             category: formData.category,
-            animation_url: contentHash, 
+            animation_url: contentHash,
             external_url: "https://aidbeacon.app",
             properties: {
                 targetAmount: formData.targetAmount,
@@ -92,7 +92,7 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
         };
 
         const ipfsHash = await uploadJSONToIPFS(metadata);
-        
+
         if (!ipfsHash) throw new Error("Metadata upload failed");
 
         setUploadStep('blockchain');
@@ -103,15 +103,16 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
             functionName: 'createCampaign',
             args: [
                 formData.title,
-                `ipfs://${ipfsHash}`, 
+                `ipfs://${ipfsHash}`,
                 parseEther(formData.targetAmount),
                 formData.category
             ],
         });
 
-    } catch (error: any) {
+    } catch (error) {
         console.error(error);
-        toast.error('Creation Failed', { description: error.message });
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        toast.error('Creation Failed', { description: errorMessage });
         setUploadStep('idle');
     }
   };
@@ -146,7 +147,7 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
         toast.success('Campaign Created Successfully!', {
             description: 'Your campaign is now live on the blockchain.'
         });
-        
+
         let timer: NodeJS.Timeout;
 
         if (campaignType === 'live' && generatedMeetingId) {
@@ -157,12 +158,12 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
         } else {
              timer = setTimeout(() => {
                 resetForm();
-             }, 3000); 
+             }, 3000);
         }
 
         return () => clearTimeout(timer);
     }
-  }, [isTransactionSuccess, campaignType, generatedMeetingId]);
+  }, [isTransactionSuccess, campaignType, generatedMeetingId, router, onClose, resetForm]);
 
   useEffect(() => {
     if (uploadStep === 'uploading_video') {

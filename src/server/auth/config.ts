@@ -63,9 +63,9 @@ export const authConfig = {
        * 6. Return the user object (NextAuth serializes it into the JWT)
        */
       async authorize(credentials) {
-        const message = credentials?.message;
-        const signature = credentials?.signature;
-        const address = credentials?.address;
+        const message = credentials?.message as string | undefined;
+        const signature = credentials?.signature as string | undefined;
+        const address = credentials?.address as string | undefined;
 
         if (
           typeof message !== "string" ||
@@ -102,21 +102,21 @@ export const authConfig = {
 
         const normalizedAddress = address.toLowerCase();
 
-        let user = await db.user.findUnique({
+        let user: { id: string; address: string; role: string | null } | null = await db.user.findUnique({
           where: { address: normalizedAddress },
-        });
+        }) as { id: string; address: string; role: string | null } | null;
 
         if (!user) {
           user = await db.user.create({
             data: { address: normalizedAddress },
-          });
+          }) as { id: string; address: string; role: string | null };
         }
 
         return {
           id: user.id,
           address: user.address,
-          role: user.role,
-        };
+          role: user.role ?? null,
+        } as const;
       },
     }),
   ],
@@ -133,8 +133,8 @@ export const authConfig = {
     jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.address = (user as { address: string }).address;
-        token.role = (user as { role: string | null }).role;
+        token.address = user.address ?? '';
+        token.role = user.role ?? null;
       }
       return token;
     },

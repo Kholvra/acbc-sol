@@ -30,11 +30,11 @@ const DashboardPage: React.FC = () => {
   });
 
   const { data: campaignsData } = useReadContracts({
-    // @ts-ignore
+    // @ts-expect-error - Wagmi contracts array type is complex
     contracts: campaignAddresses?.flatMap((addr) => [
       { address: addr, abi: CAMPAIGN_ABI, functionName: 'isActive' },
       { address: addr, abi: CAMPAIGN_ABI, functionName: 'metadata' }
-    ]) || [],
+    ]) ?? [],
     query: {
         enabled: !!campaignAddresses && campaignAddresses.length > 0,
         refetchInterval: 5000
@@ -44,7 +44,7 @@ const DashboardPage: React.FC = () => {
   useEffect(() => {
       const checkExpirations = async () => {
           if (!campaignAddresses || !campaignsData) return;
-          
+
           setIsCheckingExpiration(true);
           const expired = new Set<string>();
           const promises = campaignAddresses.map(async (addr, index) => {
@@ -54,14 +54,15 @@ const DashboardPage: React.FC = () => {
               if (activeResult?.status === 'success' && activeResult.result === false) return;
 
               if (metaResult?.status === 'success') {
-                  const meta = metaResult.result as any; 
-                  const descriptionIPFS = meta[1];
-                  
+                  const meta = metaResult.result as Record<string, unknown>;
+                  const descriptionIPFS = meta[1] as string | undefined;
+
                   if (descriptionIPFS && descriptionIPFS.startsWith('ipfs://')) {
                       try {
                           const data = await fetchJSONFromIPFS(descriptionIPFS);
-                          if (data && data.properties && data.properties.endDate) {
-                               if (isCampaignExpired(data.properties.endDate)) {
+                          if (data && typeof data === 'object' && 'properties' in data && data.properties && typeof data.properties === 'object' && 'endDate' in data.properties) {
+                               const properties = data.properties as Record<string, unknown>;
+                               if (properties.endDate && typeof properties.endDate === 'string' && isCampaignExpired(properties.endDate)) {
                                    expired.add(addr);
                                }
                           }
@@ -77,11 +78,7 @@ const DashboardPage: React.FC = () => {
           setIsCheckingExpiration(false);
       };
 
-      if (campaignAddresses && campaignsData) {
-          checkExpirations();
-      } else if (campaignAddresses?.length === 0) {
-          setIsCheckingExpiration(false);
-      }
+      void checkExpirations();
   }, [campaignAddresses, campaignsData]);
 
   const filteredCampaigns = campaignAddresses?.filter((addr, index) => {

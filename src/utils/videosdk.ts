@@ -47,8 +47,8 @@ export const createMeeting = async (token: string) => {
     throw new Error("Failed to create meeting");
   }
 
-  const { roomId } = await res.json() as { roomId: string };
-  return roomId;
+  const data = await res.json() as { roomId: string };
+  return data.roomId;
 };
 
 export const validateMeeting = async ({ roomId, token }: { roomId: string, token: string }) => {
@@ -59,7 +59,7 @@ export const validateMeeting = async ({ roomId, token }: { roomId: string, token
     };
     try {
         const response = await fetch(url, options);
-        const result = await response.json();
+        const result = await response.json() as { roomId?: string };
         return result ? result.roomId === roomId : false;
     } catch (error) {
         console.error("error", error);

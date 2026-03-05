@@ -26,24 +26,34 @@ export const fetchLocationDetails = async (latitude: number, longitude: number):
             throw new Error("Failed to fetch location data");
         }
 
-        const data = await response.json();
-        
+        const data = await response.json() as {
+            city?: string;
+            locality?: string;
+            localityInfo?: {
+                administrative?: Array<{
+                    adminLevel?: number;
+                    name?: string;
+                    description?: string;
+                }>;
+            };
+        };
+
         let kecamatan = '';
         let city = '';
 
-        if (data.localityInfo && data.localityInfo.administrative) {
+        if (data.localityInfo?.administrative) {
              const admin = data.localityInfo.administrative;
-             city = data.city || data.locality || '';
-             kecamatan = data.locality || ''; 
-             
-             const cityLevel = admin.find((a: any) => a.adminLevel === 6 || a.name.includes("Kota") || a.name.includes("Kabupaten"));
-             if (cityLevel) city = cityLevel.name;
+             city = data.city ?? data.locality ?? '';
+             kecamatan = data.locality ?? '';
 
-             const districtLevel = admin.find((a: any) => a.adminLevel === 7 || a.description === "district"); 
-             if (districtLevel) kecamatan = districtLevel.name;
+             const cityLevel = admin.find((a) => a.adminLevel === 6 || a.name?.includes("Kota") ?? false || a.name?.includes("Kabupaten") ?? false);
+             if (cityLevel?.name) city = cityLevel.name;
+
+             const districtLevel = admin.find((a) => a.adminLevel === 7 || a.description === "district");
+             if (districtLevel?.name) kecamatan = districtLevel.name;
         } else {
-             city = data.city || '';
-             kecamatan = data.locality || '';
+             city = data.city ?? '';
+             kecamatan = data.locality ?? '';
         }
 
         return {
