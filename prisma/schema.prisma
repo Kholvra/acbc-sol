@@ -19,27 +19,26 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  kycDocuments KycDocument[]
+  kycDocument KycDocument?
 }
 
 model KycDocument {
   id            String   @id @default(cuid())
-  userId        String
+  userId        String   @unique
   documentType  DocumentType
 
   extractedName String?
-  extractedNik  String?
+  extractedNik  String   @unique
 
   createdAt     DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
 }
 
 enum DocumentType {
   KTP
 }
+
 enum Role {
   DONATUR
   CAMPAIGNER
