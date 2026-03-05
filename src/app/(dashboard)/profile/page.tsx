@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import WalletWrapper from '~/components/providers/wallet-wrapper';
 import TikTokLayout from '~/components/layout/tiktok-layout';
 import CampaignCreationModal from '~/components/campaign/campaign-creation-modal';
-import { KycVerificationCard } from '~/components/kyc/kyc-verification-card';
 import { IDRX_ADDRESS, IDRX_ABI, FACTORY_ADDRESS, FACTORY_ABI, CAMPAIGN_ABI } from '~/constants/contracts';
 import { formatEther, type Address } from 'viem';
 
@@ -214,11 +213,6 @@ export default function ProfilePage () {
                                     <div className="flex justify-between items-center"><span className="font-bold text-gray-700">Total Donated</span><span className="font-black text-xl text-aid-dark">IDRX {Number(formatEther(totalDonated)).toLocaleString('id-ID')}</span></div>
                                     <div className="flex justify-between items-center"><span className="font-bold text-gray-700">Total Received</span><span className="font-black text-xl text-green-600">IDRX {Number(formatEther(totalReceived)).toLocaleString('id-ID')}</span></div>
                                 </div>
-                            </div>
-
-                            {/* KYC Verification Section */}
-                            <div className="mt-8">
-                                <KycVerificationCard />
                             </div>
 
                             <div className="mt-12">

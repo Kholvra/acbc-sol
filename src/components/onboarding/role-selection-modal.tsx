@@ -1,0 +1,173 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Users, Megaphone, ShieldAlert, Loader2, X } from 'lucide-react';
+import Button from '~/components/ui/button';
+import { toast } from 'sonner';
+
+interface RoleSelectionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export const RoleSelectionModal = ({ isOpen, onClose, onSuccess }: RoleSelectionModalProps) => {
+  const [showKycConfirm, setShowKycConfirm] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+
+  if (!isOpen) return null;
+
+  const handleRoleSelect = (role: 'DONATUR' | 'CAMPAIGNER') => {
+    if (role === 'CAMPAIGNER') {
+      setShowKycConfirm(true);
+    } else {
+      // For Donatur, we can proceed directly
+      handleConfirmRole(role);
+    }
+  };
+
+  const handleConfirmRole = (role: 'DONATUR' | 'CAMPAIGNER') => {
+    setIsLoading(true);
+    
+    // Simulating backend call since we're strictly doing UI/flow for now
+    setTimeout(() => {
+      setIsLoading(false);
+      toast.success(`Role selected as ${role}`);
+
+      onSuccess();
+
+      if (role === 'CAMPAIGNER') {
+        router.push('/kyc');
+      }
+    }, 1000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        
+        {/* Header */}
+        <div className="bg-gradient-to-r from-aid-green/20 to-aid-primary/20 p-6 relative">
+          <button 
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 bg-white/50 hover:bg-white p-2 rounded-full transition-colors"
+          >
+            <X size={20} />
+          </button>
+          
+          <h2 className="text-2xl font-heading font-black text-aid-dark text-center">
+            {showKycConfirm ? "Identity Verification" : "Choose Your Path"}
+          </h2>
+          <p className="text-center text-gray-600 text-sm mt-1 font-medium">
+            {showKycConfirm 
+              ? "Required for Campaigners" 
+              : "Select how you want to participate in AidBeacon"}
+          </p>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 md:p-8">
+          {!showKycConfirm ? (
+            <div className="space-y-4">
+              {/* Donatur Option */}
+              <button
+                onClick={() => handleRoleSelect('DONATUR')}
+                className="w-full text-left p-5 rounded-2xl border-2 border-gray-100 hover:border-aid-green/50 hover:bg-aid-green/5 transition-all group relative overflow-hidden"
+              >
+                <div className="flex items-start gap-4 relative z-10">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <Users size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-heading font-bold text-lg text-aid-dark mb-1">Donor (Donatur)</h3>
+                    <p className="text-sm text-gray-500 leading-relaxed">
+                      Support existing campaigns by donating. Browse and contribute to causes you care about across Indonesia.
+                    </p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Campaigner Option */}
+              <button
+                onClick={() => handleRoleSelect('CAMPAIGNER')}
+                className="w-full text-left p-5 rounded-2xl border-2 border-gray-100 hover:border-aid-green/50 hover:bg-aid-green/5 transition-all group relative overflow-hidden"
+              >
+                <div className="flex items-start gap-4 relative z-10">
+                  <div className="w-12 h-12 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                    <Megaphone size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-heading font-bold text-lg text-aid-dark mb-1">Campaigner</h3>
+                    <p className="text-sm text-gray-500 leading-relaxed">
+                      Create and manage fundraising campaigns. You can raise funds for relief efforts. <span className="text-orange-500 font-bold text-xs uppercase tracking-wider ml-1">Requires KYC</span>
+                    </p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="flex justify-center">
+                <div className="w-20 h-20 bg-aid-yellow/10 rounded-full flex items-center justify-center text-aid-yellow mb-2">
+                  <ShieldAlert size={40} />
+                </div>
+              </div>
+              
+              <div className="text-center">
+                <p className="text-gray-600 mb-6 leading-relaxed">
+                  As a <strong>Campaigner</strong>, you are required to verify your identity using your KTP (Indonesian National ID).
+                </p>
+                
+                <div className="bg-gray-50 p-4 rounded-xl text-left mb-8">
+                  <p className="text-xs font-bold text-gray-400 uppercase mb-3">Why we need this:</p>
+                  <ul className="space-y-2 text-sm text-gray-600 font-medium">
+                    <li className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-aid-green"></div>
+                      Ensures all campaigns are legitimate
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-aid-green"></div>
+                      Protects donors from potential fraud
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-aid-green"></div>
+                      Complies with regional regulations
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  className="flex-1" 
+                  onClick={() => setShowKycConfirm(false)}
+                  disabled={isLoading}
+                >
+                  Back
+                </Button>
+                <Button 
+                  variant="primary" 
+                  className="flex-1" 
+                  onClick={() => handleConfirmRole('CAMPAIGNER')}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 size={18} className="animate-spin" />
+                      <span>Processing...</span>
+                    </div>
+                  ) : (
+                    "Continue to KYC"
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};

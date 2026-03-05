@@ -6,6 +6,7 @@ import { baseSepolia } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { coinbaseWallet, injected } from 'wagmi/connectors';
+import { SessionProvider } from 'next-auth/react';
 
 const queryClient = new QueryClient();
 
@@ -27,24 +28,26 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const apiKey = process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY === 'your-onchainkit-key' ? '' : (process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY ?? '');
 
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <OnchainKitProvider
-          apiKey={apiKey}
-          chain={baseSepolia}
-          config={{
-            appearance: {
-              mode: 'light',
-              theme: 'custom',
-            },
-            wallet: {
-                display: 'modal', 
-            }
-          }}
-        >
-          {children}
-        </OnchainKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <SessionProvider>
+      <WagmiProvider config={wagmiConfig}>
+        <QueryClientProvider client={queryClient}>
+          <OnchainKitProvider
+            apiKey={apiKey}
+            chain={baseSepolia}
+            config={{
+              appearance: {
+                mode: 'light',
+                theme: 'custom',
+              },
+              wallet: {
+                  display: 'modal', 
+              }
+            }}
+          >
+            {children}
+          </OnchainKitProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </SessionProvider>
   );
 }
