@@ -37,6 +37,7 @@
     "jose": "^6.1.3",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.563.0",
+    "groq-sdk": "^0.37.0",
     "next": "^15.2.3",
     "next-auth": "5.0.0-beta.25",
     "ogl": "^1.0.11",
