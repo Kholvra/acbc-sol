@@ -46,7 +46,11 @@ export const fetchLocationDetails = async (latitude: number, longitude: number):
              city = data.city ?? data.locality ?? '';
              kecamatan = data.locality ?? '';
 
-             const cityLevel = admin.find((a) => a.adminLevel === 6 || a.name?.includes("Kota") ?? false || a.name?.includes("Kabupaten") ?? false);
+             const cityLevel = admin.find((a) => 
+                 a.adminLevel === 6 || 
+                 (a.name?.includes("Kota") ?? false) || 
+                 (a.name?.includes("Kabupaten") ?? false)
+             );
              if (cityLevel?.name) city = cityLevel.name;
 
              const districtLevel = admin.find((a) => a.adminLevel === 7 || a.description === "district");

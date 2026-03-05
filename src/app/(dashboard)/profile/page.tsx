@@ -7,21 +7,22 @@ import { toast } from 'sonner';
 import WalletWrapper from '~/components/providers/wallet-wrapper';
 import TikTokLayout from '~/components/layout/tiktok-layout';
 import CampaignCreationModal from '~/components/campaign/campaign-creation-modal';
+import { KycVerificationCard } from '~/components/kyc/kyc-verification-card';
 import { IDRX_ADDRESS, IDRX_ABI, FACTORY_ADDRESS, FACTORY_ABI, CAMPAIGN_ABI } from '~/constants/contracts';
-import { formatEther } from 'viem';
+import { formatEther, type Address } from 'viem';
 
 interface DonationHistory {
   type: 'sent' | 'received';
-  campaignAddress: string;
+  campaignAddress: Address;
   campaignTitle: string;
-  otherParty: string;
+  otherParty: Address;
   otherPartyLabel: string;
   amount: bigint;
   timestamp: bigint;
-  donor?: string;
+  donor?: Address;
 }
 
-const ProfilePage: React.FC = () => {
+export default function ProfilePage () {
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
   const { data: ethBalance } = useBalance({ address });
@@ -52,70 +53,82 @@ const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     const fetchHistory = () => {
-        if (!allCampaigns || !address || !campaignsData) return;
-        setIsLoadingHistory(true);
+      // BEST PRACTICE: Check .length instead of just truthiness
+      // This narrows readonly Address[] | undefined to readonly Address[]
+      // AND ensures the array is non-empty
+      if (!allCampaigns?.length || !address || !campaignsData) return;
 
-        const sent: DonationHistory[] = [];
-        const received: DonationHistory[] = [];
-        let tDonated = 0n;
-        let tReceived = 0n;
+      // TypeScript now knows campaigns is readonly Address[] (non-empty)
+      const campaigns = allCampaigns;
+      const userAddress = address;
 
-        try {
-            for (let i = 0; i < allCampaigns.length; i++) {
-                const campaignAddr = allCampaigns[i];
-                const metaResult = campaignsData[i * 3];
-                const ownerResult = campaignsData[i * 3 + 1];
-                const donationsResult = campaignsData[i * 3 + 2];
+      setIsLoadingHistory(true);
 
-                const title = metaResult?.status === 'success' ? (metaResult.result as [string, string, bigint, string])[0] : 'Unknown Campaign';
-                const owner = ownerResult?.status === 'success' ? (ownerResult.result as string) : null;
-                const isMyCampaign = owner?.toLowerCase() === address.toLowerCase();
+      const sent: DonationHistory[] = [];
+      const received: DonationHistory[] = [];
+      let tDonated = 0n;
+      let tReceived = 0n;
 
-                if (donationsResult?.status === 'success') {
-                    const donations = donationsResult.result as unknown as DonationHistory[];
-                    for (const donation of donations) {
-                        const { donor, amount, timestamp } = donation;
-                        const amountBg = amount;
+      try {
+        // TypeScript cannot narrow indexed access on readonly arrays, so we use
+        // a type-safe pattern: iterate with for...of which properly narrows types
+        let campaignIndex = 0;
+        for (const campaignAddr of campaigns) {
+          const metaResult = campaignsData[campaignIndex * 3];
+          const ownerResult = campaignsData[campaignIndex * 3 + 1];
+          const donationsResult = campaignsData[campaignIndex * 3 + 2];
 
-                        if (donor?.toLowerCase() === address.toLowerCase()) {
-                            tDonated += amountBg;
-                            sent.push({
-                                type: 'sent',
-                                campaignAddress: campaignAddr,
-                                campaignTitle: title,
-                                otherParty: campaignAddr,
-                                otherPartyLabel: 'To Campaign',
-                                amount: amountBg,
-                                timestamp
-                            });
-                        }
+          const title = metaResult?.status === 'success' ? (metaResult.result as [string, string, bigint, string])[0] : 'Unknown Campaign';
+          const owner = ownerResult?.status === 'success' ? (ownerResult.result as Address) : null;
+          const isMyCampaign = owner?.toLowerCase() === userAddress.toLowerCase();
 
-                        if (isMyCampaign) {
-                            tReceived += amountBg;
-                            received.push({
-                                type: 'received',
-                                campaignAddress: campaignAddr,
-                                campaignTitle: title,
-                                otherParty: donor,
-                                otherPartyLabel: 'From Donor',
-                                amount: amountBg,
-                                timestamp
-                            });
-                        }
-                    }
-                }
+          if (donationsResult?.status === 'success') {
+            const donations = donationsResult.result as unknown as DonationHistory[];
+            for (const donation of donations) {
+              const { donor, amount, timestamp } = donation;
+
+              if (!donor) continue;
+
+              if (donor.toLowerCase() === userAddress.toLowerCase()) {
+                tDonated += amount;
+                sent.push({
+                  type: 'sent',
+                  campaignAddress: campaignAddr,
+                  campaignTitle: title,
+                  otherParty: donor,
+                  otherPartyLabel: 'To Campaign',
+                  amount,
+                  timestamp
+                });
+              }
+
+              if (isMyCampaign) {
+                tReceived += amount;
+                received.push({
+                  type: 'received',
+                  campaignAddress: campaignAddr,
+                  campaignTitle: title,
+                  otherParty: donor,
+                  otherPartyLabel: 'From Donor',
+                  amount,
+                  timestamp
+                });
+              }
             }
-
-            setSentHistory(sent.sort((a, b) => Number(b.timestamp) - Number(a.timestamp)));
-            setReceivedHistory(received.sort((a, b) => Number(b.timestamp) - Number(a.timestamp)));
-            setTotalDonated(tDonated);
-            setTotalReceived(tReceived);
-
-        } catch (e) {
-            console.error("Error processing history:", e);
-        } finally {
-            setIsLoadingHistory(false);
+          }
+          campaignIndex++;
         }
+
+        setSentHistory(sent.sort((a, b) => Number(b.timestamp) - Number(a.timestamp)));
+        setReceivedHistory(received.sort((a, b) => Number(b.timestamp) - Number(a.timestamp)));
+        setTotalDonated(tDonated);
+        setTotalReceived(tReceived);
+
+      } catch (e) {
+        console.error("Error processing history:", e);
+      } finally {
+        setIsLoadingHistory(false);
+      }
     };
 
     if (isConnected) fetchHistory();
@@ -203,6 +216,11 @@ const ProfilePage: React.FC = () => {
                                 </div>
                             </div>
 
+                            {/* KYC Verification Section */}
+                            <div className="mt-8">
+                                <KycVerificationCard />
+                            </div>
+
                             <div className="mt-12">
                                 <div className="flex items-center gap-6 mb-6">
                                     <h3 className="text-xl font-heading font-black text-aid-dark">Transaction History</h3>
@@ -237,4 +255,3 @@ const ProfilePage: React.FC = () => {
   );
 };
 
-export default ProfilePage;

@@ -2,14 +2,15 @@
 
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Compass, User, ScrollText, Video, PlusSquare } from 'lucide-react';
+import { Home, Compass, User, ScrollText, Video, PlusSquare, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { useAccount } from 'wagmi';
+import { api } from '~/trpc/react';
 
 interface SidebarProps {
   onOpenCreate?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ onOpenCreate }) => {
+const Sidebar = ({ onOpenCreate }: SidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const { isConnected } = useAccount();
@@ -27,6 +28,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onOpenCreate }) => {
       {/* Logo Area */}
       <div className="flex items-center gap-3 mb-10 px-2 group cursor-pointer" onClick={() => router.push('/')}>
         <div className="relative w-10 h-10 flex items-center justify-center">
+             {/* eslint-disable-next-line @next/next/no-img-element */}
              <img 
                src="/images/logo-aidbeacon.png" 
                alt="AidBeacon" 
@@ -81,12 +83,19 @@ const Sidebar: React.FC<SidebarProps> = ({ onOpenCreate }) => {
       <div className="border-t border-white/20 pt-6 mt-auto">
          <button 
             onClick={() => router.push('/profile')}
-            className={`w-full flex items-center gap-3 p-3 rounded-2xl transition-all duration-300 hover:bg-white/40 ${pathname === '/profile' ? 'bg-white/60 shadow-inner' : ''}`}
+            className={`w-full flex items-center justify-between p-3 rounded-2xl transition-all duration-300 hover:bg-white/40 ${pathname === '/profile' ? 'bg-white/60 shadow-inner' : ''}`}
          >
-             <div className="w-10 h-10 bg-aid-tertiary/20 rounded-full flex items-center justify-center text-aid-tertiary">
-                 <User size={20} className="fill-current" />
+             <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-aid-tertiary/20 rounded-full flex items-center justify-center text-aid-tertiary">
+                    <User size={20} className="fill-current" />
+                </div>
+                <span className="text-sm font-heading font-bold text-aid-dark">Profile</span>
              </div>
-             <span className="text-sm font-heading font-bold text-aid-dark">Profile</span>
+             
+             {/* KYC Status Badge */}
+             {isConnected && (
+                <KycStatusBadge />
+             )}
          </button>
        
         <div className="mt-6 flex justify-between text-[10px] text-aid-dark/40 font-accent uppercase tracking-wider px-2">
@@ -96,6 +105,26 @@ const Sidebar: React.FC<SidebarProps> = ({ onOpenCreate }) => {
       </div>
     </div>
   );
+};
+
+const KycStatusBadge = () => {
+    const { data: kycStatus } = api.kyc.getStatus.useQuery();
+
+    if (!kycStatus) return null;
+
+    return (
+        <div className="flex items-center">
+            {kycStatus.hasDocument ? (
+                <div className="bg-aid-green/20 p-1.5 rounded-full text-aid-green group-hover:bg-aid-green group-hover:text-white transition-all shadow-sm">
+                    <ShieldCheck size={14} />
+                </div>
+            ) : (
+                <div className="bg-aid-yellow/20 p-1.5 rounded-full text-aid-yellow animate-pulse">
+                    <ShieldAlert size={14} />
+                </div>
+            )}
+        </div>
+    );
 };
 
 export default Sidebar;

@@ -9,6 +9,24 @@ import {
 } from "~/server/api/schemas/kyc.schema";
 
 export const kycRouter = createTRPCRouter({
+  getStatus: protectedProcedure.query(async ({ ctx }) => {
+    const document = await ctx.db.kycDocument.findUnique({
+      where: { userId: ctx.session.user.id },
+    });
+
+    return {
+      hasDocument: !!document,
+      document: document
+        ? {
+            id: document.id,
+            extractedName: document.extractedName,
+            extractedNik: document.extractedNik,
+            createdAt: document.createdAt,
+          }
+        : null,
+    };
+  }),
+
   uploadKtp: protectedProcedure
     .input(uploadKtpSchema)
     .mutation(async ({ ctx, input }) => {
