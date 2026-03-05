@@ -9,6 +9,33 @@ interface IPFSResponse {
   IpfsHash: string;
 }
 
+// campaign metadata structure
+export interface CampaignIPFSMetadata {
+  name?: string;
+  description?: string;
+  category?: string;
+  image?: string;      // For campaign card thumbnail
+  video?: string;      // For video campaigns (alternative to animation_url)
+  animation_url?: string;
+  external_url?: string;
+  properties?: {
+    province?: string;
+    targetAmount?: string;
+    endDate?: string;
+    campaignType?: 'video' | 'live';
+    location?: {
+      latitude?: number;
+      longitude?: number;
+      kecamatan?: string;
+      city?: string;
+      formatted?: string;
+      [key: string]: unknown;
+    };
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
 export const uploadJSONToIPFS = async (metadata: Record<string, unknown>) => {
   try {
     const res = await fetch("https://api.pinata.cloud/pinning/pinJSONToIPFS", {
@@ -73,13 +100,13 @@ export const uploadFileToIPFS = async (file: File) => {
     }
 };
 
-export const fetchJSONFromIPFS = async (ipfsUri: string) => {
+export const fetchJSONFromIPFS = async (ipfsUri: string): Promise<CampaignIPFSMetadata | null> => {
     try {
         const hash = ipfsUri.replace("ipfs://", "");
         const gateway = process.env.NEXT_PUBLIC_GATEWAY_URL ?? "https://gateway.pinata.cloud";
         const res = await fetch(`${gateway}/ipfs/${hash}`);
         if (!res.ok) throw new Error("Failed to fetch IPFS data");
-        return await res.json() as Record<string, unknown>;
+        return await res.json() as CampaignIPFSMetadata;
     } catch (error) {
         console.error(error);
         return null;
