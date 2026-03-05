@@ -1,54 +1,149 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
-import { type DefaultSession, type NextAuthConfig } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { type NextAuthConfig } from "next-auth";
+import { verifyMessage } from "viem";
 
 import { db } from "~/server/db";
 
 /**
- * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
- * object and keep type safety.
- *
- * @see https://next-auth.js.org/getting-started/typescript#module-augmentation
+ * Timestamp nonce validity window: 5 min.
  */
-declare module "next-auth" {
-  interface Session extends DefaultSession {
-    user: {
-      id: string;
-      // ...other properties
-      // role: UserRole;
-    } & DefaultSession["user"];
-  }
-
-  // interface User {
-  //   // ...other properties
-  //   // role: UserRole;
-  // }
-}
+const NONCE_EXPIRY_MS = 5 * 60 * 1000;
 
 /**
- * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
+ * Expected message format for wallet signature verification.
  *
- * @see https://next-auth.js.org/configuration/options
+ * Example:
+ * ```
+ * AidBeacon Authentication
+ *
+ * Sign this message to authenticate.
+ * Wallet: 0x1234...abcd
+ * Timestamp: 1709571234567
+ * ```
+ *
+ * The frontend must construct this exact format before requesting
+ * the wallet to sign it.
  */
+function buildExpectedMessage(address: string, timestamp: number): string {
+  return [
+    "AidBeacon Authentication",
+    "",
+    "Sign this message to authenticate.",
+    `Wallet: ${address}`,
+    `Timestamp: ${timestamp}`,
+  ].join("\n");
+}
+
+function extractTimestamp(message: string): number | null {
+  const match = /Timestamp:\s*(\d+)/.exec(message);
+  if (!match?.[1]) return null;
+  return Number(match[1]);
+}
+
 export const authConfig = {
   providers: [
-    /**
-     * ...add more providers here.
-     *
-     * Most other providers require a bit more work than the Discord provider. For example, the
-     * GitHub provider requires you to add the `refresh_token_expires_in` field to the Account
-     * model. Refer to the NextAuth.js docs for the provider you want to use. Example:
-     *
-     * @see https://next-auth.js.org/providers/github
-     */
-  ],
-  adapter: PrismaAdapter(db),
-  callbacks: {
-    session: ({ session, user }) => ({
-      ...session,
-      user: {
-        ...session.user,
-        id: user.id,
+    CredentialsProvider({
+      name: "Web3 Wallet",
+      credentials: {
+        message: { label: "Message", type: "text" },
+        signature: { label: "Signature", type: "text" },
+        address: { label: "Wallet Address", type: "text" },
+      },
+
+      /**
+       * authorize() called when the frontend sends a POST to /api/auth/callback/credentials.
+       *
+       * Flow:
+       * 1. Validate that all required fields are present
+       * 2. Extract and validate the timestamp nonce from the message
+       * 3. Rebuild the expected message and compare with the received message
+       * 4. Use viem's verifyMessage to recover the signer from the signature
+       *    and verify it matches the claimed address
+       * 5. Look up or create the user in the database
+       * 6. Return the user object (NextAuth serializes it into the JWT)
+       */
+      async authorize(credentials) {
+        const message = credentials?.message;
+        const signature = credentials?.signature;
+        const address = credentials?.address;
+
+        if (
+          typeof message !== "string" ||
+          typeof signature !== "string" ||
+          typeof address !== "string"
+        ) {
+          return null;
+        }
+
+        const timestamp = extractTimestamp(message);
+        if (timestamp === null) return null;
+
+        const now = Date.now();
+        if (Math.abs(now - timestamp) > NONCE_EXPIRY_MS) {
+          return null;
+        }
+
+        const expectedMessage = buildExpectedMessage(address, timestamp);
+        if (message !== expectedMessage) {
+          return null;
+        }
+
+        try {
+          const isValid = await verifyMessage({
+            address: address as `0x${string}`,
+            message,
+            signature: signature as `0x${string}`,
+          });
+
+          if (!isValid) return null;
+        } catch {
+          return null;
+        }
+
+        const normalizedAddress = address.toLowerCase();
+
+        let user = await db.user.findUnique({
+          where: { address: normalizedAddress },
+        });
+
+        if (!user) {
+          user = await db.user.create({
+            data: { address: normalizedAddress },
+          });
+        }
+
+        return {
+          id: user.id,
+          address: user.address,
+          role: user.role,
+        };
       },
     }),
+  ],
+
+  session: {
+    strategy: "jwt",
+  },
+
+  pages: {
+    signIn: "/sign-in",
+  },
+
+  callbacks: {
+    jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        token.address = (user as { address: string }).address;
+        token.role = (user as { role: string | null }).role;
+      }
+      return token;
+    },
+
+    session({ session, token }) {
+      session.user.id = token.id as string;
+      session.user.address = token.address as string;
+      session.user.role = token.role as string | null;
+      return session;
+    },
   },
 } satisfies NextAuthConfig;
