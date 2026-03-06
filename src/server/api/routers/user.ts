@@ -12,4 +12,37 @@ export const userRouter = createTRPCRouter({
       }) as User;
       return user;
     }),
+
+  getProfile: protectedProcedure.query(async ({ ctx }) => {
+    const user = await ctx.db.user.findUnique({
+      where: { id: ctx.session.user.id },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        address: true,
+        kycDocument: {
+          select: {
+            id: true,
+            documentType: true,
+            extractedName: true,
+            extractedNik: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    return {
+      hasRole: !!user?.role,
+      hasKyc: !!user?.kycDocument,
+      role: user?.role,
+      kycStatus: user?.kycDocument
+        ? {
+            hasDocument: true,
+            document: user.kycDocument,
+          }
+        : null,
+    };
+  }),
 });

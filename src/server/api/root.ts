@@ -1,5 +1,6 @@
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 import { kycRouter } from "~/server/api/routers/kyc";
+import { userRouter } from "./routers/user";
 
 /**
  * This is the primary router for your server.
@@ -8,6 +9,7 @@ import { kycRouter } from "~/server/api/routers/kyc";
  */
 export const appRouter = createTRPCRouter({
   kyc: kycRouter,
+  user: userRouter,
 });
 
 // export type definition of API
