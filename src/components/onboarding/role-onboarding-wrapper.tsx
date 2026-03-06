@@ -4,11 +4,12 @@ import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { RoleSelectionModal } from './role-selection-modal';
-
 import { api } from '~/trpc/react';
 
+const RESTRICTED_ROUTES = ['/kyc', '/profile', '/activity', '/live', '/explore'];
+
 export const RoleOnboardingWrapper = () => {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
   const { data: profile, isLoading } = api.user.getProfile.useQuery(undefined, {
@@ -18,34 +19,38 @@ export const RoleOnboardingWrapper = () => {
   const [showModal, setShowModal] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
 
-  // Global Auth Guard & Role Enforcement
+  // auth guard & role enforcement
   useEffect(() => {
-    // 1. Only kick if explicitly unauthenticated by NextAuth.
+    // unauthenticated - redirect to sign-in
     if (status === 'unauthenticated') {
       router.push('/sign-in');
       return;
     }
 
-    // 2. If authenticated, check if the profile exists in DB.
-    if (status === 'authenticated' && !isLoading && profile === null) {
+    // wait for session and query to load
+    if (status !== 'authenticated' || isLoading) return;
+
+    // authenticated but no profile in DB - redirect to sign-in
+    if (profile === null) {
       router.push('/sign-in');
       return;
     }
 
-    // 3. Quarantine users without roles to /dashboard
-    // If we are currently completing (transitioning), ignore these checks to avoid flicker
-    if (status === 'authenticated' && !isLoading && profile && !isCompleting) {
-      if (!profile.hasRole) {
-        // Prevent accessing other routes if no role is selected
-        const restrictedRoutes = ['/kyc', '/profile', '/activity', '/live', '/explore'];
-        if (restrictedRoutes.some(route => pathname.startsWith(route))) {
-          router.push('/dashboard');
-        } else {
-          setShowModal(true);
-        }
-      } else {
-        setShowModal(false);
-      }
+    // no profile data yet - wait
+    if (!profile) return;
+
+    // user has role - hide modal
+    if (isCompleting || profile.hasRole) {
+      setShowModal(false);
+      return;
+    }
+
+    // no role - quarantine or show modal
+    const isRestricted = RESTRICTED_ROUTES.some(route => pathname.startsWith(route));
+    if (isRestricted) {
+      router.push('/dashboard');
+    } else {
+      setShowModal(true);
     }
   }, [status, isLoading, profile, pathname, router, isCompleting]);
 
@@ -54,14 +59,15 @@ export const RoleOnboardingWrapper = () => {
     setShowModal(false);
   };
 
-  // DO NOT render anything that depends on session until it's loaded and authenticated
-  if (status !== 'authenticated' || !profile) {
+  // don't render until session is loaded and authenticated
+  // also wait for profile query to complete
+  if (status !== 'authenticated' || isLoading) {
     return null;
   }
 
   return (
-    <RoleSelectionModal 
-      isOpen={showModal} 
+    <RoleSelectionModal
+      isOpen={showModal}
       onSuccess={handleSuccess}
     />
   );

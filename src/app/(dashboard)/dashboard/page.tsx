@@ -12,12 +12,22 @@ import TikTokLayout from '~/components/layout/tiktok-layout';
 import Button from '~/components/ui/button';
 import { fetchJSONFromIPFS } from '~/utils/pinata';
 import { isCampaignExpired } from '~/utils/date';
+import { api } from '~/trpc/react';
+
+const REFETCH_INTERVAL_MS = 5000;
+const AUTH_REDIRECT_DELAY_MS = 500;
 
 const DashboardPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isConnected, isConnecting } = useAccount();
   const { status } = useSession();
   const router = useRouter();
+
+  // check if user exists in DB
+  const { data: profile, isLoading: isProfileLoading } = api.user.getProfile.useQuery(undefined, {
+    enabled: status === 'authenticated',
+    retry: false,
+  });
 
   const [expiredAddresses, setExpiredAddresses] = useState<Set<string>>(new Set());
   const [isCheckingExpiration, setIsCheckingExpiration] = useState(true);
@@ -27,7 +37,7 @@ const DashboardPage = () => {
     abi: FACTORY_ABI,
     functionName: 'getCampaigns',
     query: {
-        refetchInterval: 5000, 
+        refetchInterval: REFETCH_INTERVAL_MS,
     }
   });
 
@@ -39,7 +49,7 @@ const DashboardPage = () => {
     ]) ?? [],
     query: {
         enabled: !!campaignAddresses && campaignAddresses.length > 0,
-        refetchInterval: 5000
+        refetchInterval: REFETCH_INTERVAL_MS
     }
   });
 
@@ -92,15 +102,17 @@ const DashboardPage = () => {
   });
 
   useEffect(() => {
-    // Only redirect if NextAuth explicitly says the user is unauthenticated.
-    // We don't check !isConnected here because wagmi connection state can
-    // be out of sync with the session cookie right after redirect.
+    // debounce redirect to avoid race conditions during session transitions
     if (status === 'unauthenticated') {
-      router.push('/sign-in');
+      const timer = setTimeout(() => {
+        router.push('/sign-in');
+      }, AUTH_REDIRECT_DELAY_MS);
+      return () => clearTimeout(timer);
     }
-  }, [status, router]);
+  }, [status, router, profile]);
 
-  if (isConnecting || status === 'loading') {
+  // show loading while connecting, session loading, or profile loading
+  if (isConnecting || status === 'loading' || isProfileLoading) {
       return (
         <div className="h-screen w-full flex items-center justify-center bg-aid-offwhite">
             <Loader2 className="animate-spin text-aid-green" size={48} />
@@ -108,8 +120,13 @@ const DashboardPage = () => {
       );
   }
 
-  // Final gate: If still not authenticated or connected after loading, don't render.
-  // But don't trigger a redirect here to avoid loop races.
+  // redirect to sign-in if unauthenticated or session exists but no profile in DB
+  if (status === 'unauthenticated' || (status === 'authenticated' && profile === null)) {
+      router.push('/sign-in');
+      return null;
+  }
+
+  // don't render if not authenticated - avoid redirect loops
   if (status !== 'authenticated' || !isConnected) {
       return null;
   }

@@ -3,34 +3,46 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount, useSignMessage } from 'wagmi';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import WalletWrapper from '~/components/providers/wallet-wrapper';
 import Button from '~/components/ui/button';
 import { Radio } from 'lucide-react';
 import { toast } from 'sonner';
+import { api } from '~/trpc/react';
+
+const buildAuthMessage = (address: string, timestamp: number): string => {
+  return [
+    'AidBeacon Authentication',
+    '',
+    'Sign this message to authenticate.',
+    `Wallet: ${address}`,
+    `Timestamp: ${timestamp}`,
+  ].join('\n');
+};
 
 const SignInPage: React.FC = () => {
   const { isConnected, address, isConnecting } = useAccount();
   const { signMessageAsync } = useSignMessage();
+  const { status } = useSession();
   const router = useRouter();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-  
-  // Track if we have already triggered auth for the current address to prevent loops
-  const authAttemptedRef = useRef<string | null>(null);
 
-  const buildMessage = (addr: string, timestamp: number) => {
-    return [
-      'AidBeacon Authentication',
-      '',
-      'Sign this message to authenticate.',
-      `Wallet: ${addr}`,
-      `Timestamp: ${timestamp}`,
-    ].join('\n');
-  };
+  // tRPC utils for invalidation
+  const utils = api.useUtils();
+
+  // check if user exists in DB
+  const { data: profile, isLoading: isProfileLoading } = api.user.getProfile.useQuery(undefined, {
+    enabled: status === 'authenticated' && isConnected,
+    retry: false,
+    staleTime: 0, // always refetch when enabled
+  });
+
+  // track which address we've already attempted auth for
+  const lastAuthAttemptAddress = useRef<string | null>(null);
 
   const handleSignIn = useCallback(async (walletAddress: string) => {
-    if (!walletAddress) {
-      toast.error('No wallet address');
+    // skip if no address or already authenticated with profile
+    if (!walletAddress || (status === 'authenticated' && profile)) {
       return;
     }
 
@@ -38,7 +50,7 @@ const SignInPage: React.FC = () => {
 
     try {
       const timestamp = Date.now();
-      const message = buildMessage(walletAddress, timestamp);
+      const message = buildAuthMessage(walletAddress, timestamp);
       const signature = await signMessageAsync({ message });
 
       const result = await signIn('credentials', {
@@ -53,36 +65,49 @@ const SignInPage: React.FC = () => {
       }
 
       toast.success('Successfully authenticated!');
+
+      // invalidate profile query to ensure fresh data
+      await utils.user.getProfile.invalidate();
+
       router.push('/dashboard');
+      router.refresh();
 
     } catch (error) {
       console.error('Sign in error:', error);
-      if (error instanceof Error) {
-        if (error.message.includes('User rejected')) {
-          toast.error('Signature cancelled');
-        } else {
-          toast.error(error.message);
-        }
+      const message = error instanceof Error ? error.message : 'Authentication failed';
+      
+      if (message.includes('User rejected')) {
+        toast.error('Signature cancelled');
       } else {
-        toast.error('Authentication failed');
+        toast.error(message);
       }
+      
       setIsAuthenticating(false);
+      // don't reset ref - let user manually retry via button
     }
-  }, [signMessageAsync, router]);
+  }, [signMessageAsync, router, status, profile, utils]);
 
   // auto-authenticate when wallet connects
   useEffect(() => {
-    if (isConnected && address && !isAuthenticating && authAttemptedRef.current !== address) {
-      authAttemptedRef.current = address;
+    if (isConnected && address && !isAuthenticating && status === 'unauthenticated' && lastAuthAttemptAddress.current !== address) {
+      lastAuthAttemptAddress.current = address;
       void handleSignIn(address);
     }
-    
-    if (!isConnected) {
-      authAttemptedRef.current = null;
-    }
-  }, [isConnected, address, isAuthenticating, handleSignIn]);
 
-  if (isConnecting || isAuthenticating) {
+    if (!isConnected) {
+      lastAuthAttemptAddress.current = null;
+    }
+  }, [isConnected, address, isAuthenticating, status]);
+
+  // redirect to dashboard if authenticated and profile exists
+  useEffect(() => {
+    if (status === 'authenticated' && profile) {
+      router.push('/dashboard');
+    }
+  }, [status, profile, router]);
+
+  // show loading only during wallet connection or profile check
+  if (isConnecting || (status === 'authenticated' && isProfileLoading)) {
     return (
       <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center bg-white px-4" data-ock-theme="custom">
         <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl border border-aid-dark/5 text-center">
@@ -93,12 +118,12 @@ const SignInPage: React.FC = () => {
           </div>
 
           <h1 className="text-3xl font-heading font-black text-aid-dark mb-2">
-            {isConnecting ? 'Connecting...' : 'Authenticating...'}
+            {isConnecting ? 'Connecting...' : 'Loading...'}
           </h1>
           <p className="text-gray-500 mb-8">
-            {isConnecting 
-              ? 'Please approve the connection in your wallet' 
-              : 'Please sign the message in your wallet'}
+            {isConnecting
+              ? 'Please approve the connection in your wallet'
+              : 'Please wait while we load your profile'}
           </p>
 
           <div className="flex justify-center">
@@ -112,6 +137,19 @@ const SignInPage: React.FC = () => {
       </div>
     );
   }
+
+  const getButtonText = (): string => {
+    if (isAuthenticating) return 'Signing...';
+    // show "Sign Message" if not authenticated OR authenticated but no profile (re-auth needed)
+    if (status === 'authenticated' && profile) return 'Already Signed In';
+    return 'Sign Message to Login';
+  };
+
+  const getButtonDisabled = (): boolean => {
+    if (isAuthenticating) return true;
+    if (status === 'authenticated' && profile) return true;
+    return false;
+  };
 
   return (
     <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center bg-white px-4" data-ock-theme="custom">
@@ -137,12 +175,13 @@ const SignInPage: React.FC = () => {
                   ✅ Wallet connected: <span className="font-mono">{address.slice(0, 6)}...{address.slice(-4)}</span>
                 </p>
               </div>
-              <Button 
-                onClick={() => void handleSignIn(address)} 
+              <Button
+                onClick={() => void handleSignIn(address)}
                 className="w-full"
                 size="lg"
+                disabled={getButtonDisabled()}
               >
-                Sign Message to Login
+                {getButtonText()}
               </Button>
             </>
           ) : (
