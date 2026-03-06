@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Users, Megaphone, ShieldAlert, Loader2, X } from 'lucide-react';
+import { Users, Megaphone, ShieldAlert, Loader2 } from 'lucide-react';
 import Button from '~/components/ui/button';
 import { toast } from 'sonner';
 import { api } from '~/trpc/react';
@@ -10,11 +10,10 @@ import { useSession } from 'next-auth/react';
 
 interface RoleSelectionModalProps {
   isOpen: boolean;
-  onClose: () => void;
   onSuccess: () => void;
 }
 
-export const RoleSelectionModal = ({ isOpen, onClose, onSuccess }: RoleSelectionModalProps) => {
+export const RoleSelectionModal = ({ isOpen, onSuccess }: RoleSelectionModalProps) => {
   const [showKycConfirm, setShowKycConfirm] = useState(false);
   const { update: updateSession } = useSession();
   const router = useRouter();
@@ -24,7 +23,6 @@ export const RoleSelectionModal = ({ isOpen, onClose, onSuccess }: RoleSelection
     onSuccess: async (data) => {
       toast.success(`Role selected as ${data.role}`);
       
-      // Update the local session so the onboarding wrapper knows the role is set
       await updateSession({
         user: {
           role: data.role,
@@ -37,6 +35,8 @@ export const RoleSelectionModal = ({ isOpen, onClose, onSuccess }: RoleSelection
 
       if (data.role === 'CAMPAIGNER') {
         router.push('/kyc');
+      } else {
+        router.push('/dashboard');
       }
     },
     onError: (error) => {
@@ -64,18 +64,11 @@ export const RoleSelectionModal = ({ isOpen, onClose, onSuccess }: RoleSelection
   const isLoading = updateProfileMutation.isPending;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
       <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
         {/* Header */}
         <div className="bg-gradient-to-r from-aid-green/20 to-aid-primary/20 p-6 relative">
-          <button 
-            onClick={onClose}
-            className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 bg-white/50 hover:bg-white p-2 rounded-full transition-colors"
-          >
-            <X size={20} />
-          </button>
-          
           <h2 className="text-2xl font-heading font-black text-aid-dark text-center">
             {showKycConfirm ? "Identity Verification" : "Choose Your Path"}
           </h2>

@@ -54,7 +54,6 @@ const SignInPage: React.FC = () => {
 
       toast.success('Successfully authenticated!');
       router.push('/dashboard');
-      router.refresh();
 
     } catch (error) {
       console.error('Sign in error:', error);

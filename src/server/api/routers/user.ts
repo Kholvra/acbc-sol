@@ -33,11 +33,13 @@ export const userRouter = createTRPCRouter({
       },
     });
 
+    if (!user) return null;
+
     return {
-      hasRole: !!user?.role,
-      hasKyc: !!user?.kycDocument,
-      role: user?.role,
-      kycStatus: user?.kycDocument
+      hasRole: !!user.role,
+      hasKyc: !!user.kycDocument,
+      role: user.role,
+      kycStatus: user.kycDocument
         ? {
             hasDocument: true,
             document: user.kycDocument,

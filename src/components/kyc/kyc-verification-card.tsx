@@ -36,9 +36,10 @@ export const KycVerificationCard = () => {
   const { data: kycStatus, isLoading: isLoadingStatus } = api.kyc.getStatus.useQuery();
 
   const uploadMutation = api.kyc.uploadKtp.useMutation({
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast.success(`Verification Successful! Welcome, ${data.name}`);
-      void utils.kyc.getStatus.invalidate();
+      await utils.kyc.getStatus.invalidate();
+      await utils.user.getProfile.invalidate();
       setIsUploading(false);
       setPreview(null);
     },

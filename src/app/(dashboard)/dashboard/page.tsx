@@ -5,6 +5,7 @@ import CampaignCreationModal from '~/components/campaign/campaign-creation-modal
 import CampaignCard from '~/components/campaign/campaign-card';
 import { useAccount, useReadContract, useReadContracts } from 'wagmi';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { FACTORY_ADDRESS, FACTORY_ABI, CAMPAIGN_ABI } from '~/constants/contracts';
 import { Loader2 } from 'lucide-react';
 import TikTokLayout from '~/components/layout/tiktok-layout';
@@ -12,9 +13,10 @@ import Button from '~/components/ui/button';
 import { fetchJSONFromIPFS } from '~/utils/pinata';
 import { isCampaignExpired } from '~/utils/date';
 
-const DashboardPage: React.FC = () => {
+const DashboardPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isConnected, isConnecting } = useAccount();
+  const { status } = useSession();
   const router = useRouter();
 
   const [expiredAddresses, setExpiredAddresses] = useState<Set<string>>(new Set());
@@ -90,12 +92,15 @@ const DashboardPage: React.FC = () => {
   });
 
   useEffect(() => {
-    if (!isConnecting && !isConnected) {
-        router.push('/sign-in');
+    // Only redirect if NextAuth explicitly says the user is unauthenticated.
+    // We don't check !isConnected here because wagmi connection state can
+    // be out of sync with the session cookie right after redirect.
+    if (status === 'unauthenticated') {
+      router.push('/sign-in');
     }
-  }, [isConnected, isConnecting, router]);
+  }, [status, router]);
 
-  if (isConnecting) {
+  if (isConnecting || status === 'loading') {
       return (
         <div className="h-screen w-full flex items-center justify-center bg-aid-offwhite">
             <Loader2 className="animate-spin text-aid-green" size={48} />
@@ -103,7 +108,11 @@ const DashboardPage: React.FC = () => {
       );
   }
 
-  if (!isConnected) return null;
+  // Final gate: If still not authenticated or connected after loading, don't render.
+  // But don't trigger a redirect here to avoid loop races.
+  if (status !== 'authenticated' || !isConnected) {
+      return null;
+  }
 
   return (
     <TikTokLayout onOpenCreate={() => setIsModalOpen(true)}>

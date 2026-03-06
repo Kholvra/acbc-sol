@@ -6,6 +6,8 @@ import { Home, Compass, User, ScrollText, Video, PlusSquare, ShieldCheck, Shield
 import { useAccount } from 'wagmi';
 import { api } from '~/trpc/react';
 
+import { toast } from 'sonner';
+
 interface SidebarProps {
   onOpenCreate?: () => void;
 }
@@ -14,6 +16,9 @@ const Sidebar = ({ onOpenCreate }: SidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
   const { isConnected } = useAccount();
+  const { data: profile } = api.user.getProfile.useQuery(undefined, {
+    enabled: isConnected
+  });
 
   const navItems = [
     { label: "For You", icon: Home, path: "/dashboard", active: pathname === "/dashboard" || pathname === "/" },
@@ -21,6 +26,19 @@ const Sidebar = ({ onOpenCreate }: SidebarProps) => {
     { label: "Explore", icon: Compass, path: "/explore", active: pathname === "/explore" },
     { label: "My Activity", icon: ScrollText, path: "/activity", active: pathname === "/activity" },
   ];
+
+  const handleCreateClick = () => {
+    if (!profile) return;
+    
+    if (profile.role === 'CAMPAIGNER') {
+      if (profile.hasKyc) {
+        onOpenCreate?.();
+      } else {
+        toast.error("Identity Verification (KYC) required to create campaigns");
+        router.push('/kyc');
+      }
+    }
+  };
 
   return (
     <div className="hidden md:flex flex-col w-64 h-[calc(100vh-2rem)] fixed left-4 top-4 bg-white/20 backdrop-blur-xl border border-white/30 text-aid-dark p-6 z-50 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] font-body transition-all duration-300 rounded-3xl">
@@ -65,19 +83,21 @@ const Sidebar = ({ onOpenCreate }: SidebarProps) => {
         ))}
       </nav>
 
-      {/* CTA Button */}
-      <div className="px-1 mb-8">
-        <button 
-            onClick={onOpenCreate}
-            className="group relative w-full overflow-hidden rounded-2xl p-0.5 transition-transform active:scale-95 shadow-lg hover:shadow-aid-green/20"
-        >
-            <div className="absolute inset-0 bg-gradient-to-r from-aid-primary via-aid-green to-aid-primary animate-spin-slow opacity-70"></div>
-            <div className="relative bg-white/90 backdrop-blur-md rounded-[14px] py-3.5 px-4 flex items-center justify-center gap-2 transition-colors group-hover:bg-white/95">
-                <PlusSquare size={20} className="text-aid-dark group-hover:text-aid-green transition-colors" />
-                <span className="font-heading font-black text-aid-dark tracking-wide uppercase text-sm">CREATE CAMPAIGN</span>
-            </div>
-        </button>
-      </div>
+      {/* CTA Button - Only for Campaigners */}
+      {profile?.role === 'CAMPAIGNER' && (
+        <div className="px-1 mb-8">
+          <button 
+              onClick={handleCreateClick}
+              className="group relative w-full overflow-hidden rounded-2xl p-0.5 transition-transform active:scale-95 shadow-lg hover:shadow-aid-green/20"
+          >
+              <div className="absolute inset-0 bg-gradient-to-r from-aid-primary via-aid-green to-aid-primary animate-spin-slow opacity-70"></div>
+              <div className="relative bg-white/90 backdrop-blur-md rounded-[14px] py-3.5 px-4 flex items-center justify-center gap-2 transition-colors group-hover:bg-white/95">
+                  <PlusSquare size={20} className="text-aid-dark group-hover:text-aid-green transition-colors" />
+                  <span className="font-heading font-black text-aid-dark tracking-wide uppercase text-sm">CREATE CAMPAIGN</span>
+              </div>
+          </button>
+        </div>
+      )}
 
       {/* Footer Area: Profile Link Only */}
       <div className="border-t border-white/20 pt-6 mt-auto">
