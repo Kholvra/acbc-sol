@@ -4,17 +4,25 @@ import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { RoleSelectionModal } from './role-selection-modal';
 
+import { api } from '~/trpc/react';
+
 export const RoleOnboardingWrapper = () => {
   const { data: session, status } = useSession();
+  const { data: profile, isLoading } = api.user.getProfile.useQuery(undefined, {
+    enabled: status === 'authenticated',
+  });
+
   const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
-      if (!session.user.role) {
+    if (status === 'authenticated' && !isLoading && profile) {
+      if (!profile.hasRole) {
         setShowModal(true);
+      } else {
+        setShowModal(false);
       }
     }
-  }, [session, status]);
+  }, [status, isLoading, profile]);
 
   return (
     <RoleSelectionModal 

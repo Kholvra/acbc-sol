@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Users, Megaphone, ShieldAlert, Loader2, X } from 'lucide-react';
 import Button from '~/components/ui/button';
 import { toast } from 'sonner';
+import { api } from '~/trpc/react';
+import { useSession } from 'next-auth/react';
 
 interface RoleSelectionModalProps {
   isOpen: boolean;
@@ -14,8 +16,33 @@ interface RoleSelectionModalProps {
 
 export const RoleSelectionModal = ({ isOpen, onClose, onSuccess }: RoleSelectionModalProps) => {
   const [showKycConfirm, setShowKycConfirm] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const { update: updateSession } = useSession();
   const router = useRouter();
+  const utils = api.useUtils();
+
+  const updateProfileMutation = api.user.updateProfile.useMutation({
+    onSuccess: async (data) => {
+      toast.success(`Role selected as ${data.role}`);
+      
+      // Update the local session so the onboarding wrapper knows the role is set
+      await updateSession({
+        user: {
+          role: data.role,
+        },
+      });
+
+      await utils.user.getProfile.invalidate();
+
+      onSuccess();
+
+      if (data.role === 'CAMPAIGNER') {
+        router.push('/kyc');
+      }
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to update profile.");
+    }
+  });
 
   if (!isOpen) return null;
 
@@ -23,26 +50,18 @@ export const RoleSelectionModal = ({ isOpen, onClose, onSuccess }: RoleSelection
     if (role === 'CAMPAIGNER') {
       setShowKycConfirm(true);
     } else {
-      // For Donatur, we can proceed directly
       handleConfirmRole(role);
     }
   };
 
   const handleConfirmRole = (role: 'DONATUR' | 'CAMPAIGNER') => {
-    setIsLoading(true);
-    
-    // Simulating backend call since we're strictly doing UI/flow for now
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success(`Role selected as ${role}`);
-
-      onSuccess();
-
-      if (role === 'CAMPAIGNER') {
-        router.push('/kyc');
-      }
-    }, 1000);
+    updateProfileMutation.mutate({ 
+      role,
+      name: "New User" // Default placeholder name for first-time onboarding
+    });
   };
+
+  const isLoading = updateProfileMutation.isPending;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
