@@ -1,5 +1,6 @@
 export const FACTORY_ADDRESS = (process.env.NEXT_PUBLIC_FACTORY_ADDRESS ?? "0x9b2ada99E5A6D3FcA27725fDB601D01B8FdcDea4") as `0x${string}`;
 export const IDRX_ADDRESS = (process.env.NEXT_PUBLIC_IDRX_ADDRESS ?? "0x73E47ff3b950f8777aa2B84f80a87F0f633A1176") as `0x${string}`;
+export const QUICK_DONATE_AMOUNT = '1000';
 
 export const IDRX_ABI = [
   {
