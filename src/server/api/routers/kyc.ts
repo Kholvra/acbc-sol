@@ -1,5 +1,4 @@
 import { TRPCError } from "@trpc/server";
-import { Prisma } from "generated/prisma";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { extractKtpData } from "~/lib/ai/ktp-extractor";
@@ -7,6 +6,7 @@ import {
   uploadKtpSchema,
   ktpExtractedSchema,
 } from "~/server/api/schemas/kyc.schema";
+import { Prisma } from "@prisma/client";
 
 export const kycRouter = createTRPCRouter({
   getStatus: protectedProcedure.query(async ({ ctx }) => {
