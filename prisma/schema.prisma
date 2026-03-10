@@ -19,6 +19,9 @@ model User {
   updatedAt DateTime @updatedAt
 
   kycDocument KycDocument?
+
+  campaigns Campaign[]
+  invoices  Invoice[]
 }
 
 model KycDocument {
@@ -32,6 +35,89 @@ model KycDocument {
   createdAt     DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Campaign {
+  id            String   @id @default(cuid())
+  creatorId     String
+  title         String
+  pitchVideoUrl String?
+  category      String
+  province      String
+  targetAmount  Int
+  endDate       DateTime
+  description   String
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  creator User @relation(fields: [creatorId], references: [id])
+
+  items    CampaignItem[]
+  invoices Invoice[]
+}
+
+model CampaignItem {
+  id             String   @id @default(cuid())
+  campaignId     String
+  itemName       String
+  quantity       Int
+  estimatedPrice Int
+  totalPrice     Int
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([campaignId])
+}
+
+model Invoice {
+  id            String   @id @default(cuid())
+  campaignId    String
+  submittedById String
+
+  storeName     String?
+  invoiceNumber String?
+  invoiceDate   DateTime?
+  totalAmount   Int?
+
+  createdAt DateTime @default(now())
+
+  campaign    Campaign            @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  submittedBy User                @relation(fields: [submittedById], references: [id])
+  attachments InvoiceAttachment[]
+  items       InvoiceItem[]
+
+  @@index([campaignId])
+}
+
+model InvoiceAttachment {
+  id        String @id @default(cuid())
+  invoiceId String
+
+  fileUrl   String
+  fileType  String
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  uploadedAt DateTime @default(now())
+
+  @@index([invoiceId])
+}
+
+model InvoiceItem {
+  id        String @id @default(cuid())
+  invoiceId String
+
+  itemName  String
+  quantity  Int?
+  price     Int?
+  total     Int?
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
 }
 
 enum DocumentType {
