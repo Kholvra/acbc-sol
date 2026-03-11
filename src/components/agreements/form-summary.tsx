@@ -25,64 +25,78 @@ export function FormSummary({ formData }: FormSummaryProps) {
   };
 
   return (
-    <div className="rounded-2xl p-6 bg-neutral-800 border border-neutral-700">
-      <h3 className="text-xl font-bold text-white mb-6">Review Summary</h3>
+    <div className="rounded-[32px] p-8 bg-white/60 backdrop-blur-xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative overflow-hidden">
+      {/* Visual Accent */}
+      <div className="absolute top-0 right-0 w-64 h-64 bg-aid-green/5 rounded-full -mr-32 -mt-32 blur-3xl" />
+        
+      <h3 className="text-2xl font-heading font-black text-aid-dark mb-8 relative z-10 tracking-tight">Review Summary</h3>
 
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-slate-400 mb-1">Vendor</p>
-            <p className="font-bold text-white">{formData.vendorName}</p>
+      <div className="space-y-8 relative z-10">
+        <div className="grid grid-cols-2 gap-8">
+          <div className="bg-white/40 p-5 rounded-2xl border border-white/60 shadow-sm">
+            <p className="text-[10px] font-heading font-black text-aid-dark/30 mb-2 uppercase tracking-[0.2em]">Vendor</p>
+            <p className="font-heading font-black text-aid-dark text-lg">{formData.vendorName}</p>
           </div>
-          <div>
-            <p className="text-sm text-slate-400 mb-1">Category</p>
-            <p className="font-bold text-white">{categoryLabels[formData.category] ?? formData.category}</p>
+          <div className="bg-white/40 p-5 rounded-2xl border border-white/60 shadow-sm">
+            <p className="text-[10px] font-heading font-black text-aid-dark/30 mb-2 uppercase tracking-[0.2em]">Category</p>
+            <p className="font-heading font-black text-aid-dark text-lg">{categoryLabels[formData.category] ?? formData.category}</p>
           </div>
         </div>
 
-        <div className="border-t border-white/10 pt-4">
-          <p className="text-sm text-slate-400 mb-2">Items</p>
-          <ul className="space-y-2">
+        <div className="bg-white/40 rounded-2xl border border-white/60 p-6 shadow-sm">
+          <p className="text-[10px] font-heading font-black text-aid-dark/30 mb-4 uppercase tracking-[0.2em]">Items List</p>
+          <ul className="space-y-3">
             {formData.items.map((item, i) => (
-              <li key={i} className="flex justify-between text-sm">
-                <span className="text-white">{item.itemName} × {item.quantity}</span>
-                <span className="text-slate-300 font-mono">
-                  Rp {(item.unitPrice * item.quantity).toLocaleString('id-ID')}
-                </span>
+              <li key={i} className="flex justify-between items-center group transition-all">
+                <div className="flex flex-col">
+                    <span className="font-heading font-black text-aid-dark text-sm">{item.itemName}</span>
+                    <span className="text-[10px] font-bold text-aid-dark/40 uppercase tracking-widest">Qty: {item.quantity} units</span>
+                </div>
+                <div className="flex flex-col items-end">
+                    <span className="font-heading font-black text-aid-dark">
+                        <span className="text-[10px] text-aid-dark/30 mr-1">IDR</span>
+                        {(item.unitPrice * item.quantity).toLocaleString('id-ID')}
+                    </span>
+                    <span className="text-[10px] text-aid-dark/30 font-bold">Rp {item.unitPrice.toLocaleString('id-ID')} / unit</span>
+                </div>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p className="text-slate-400 mb-1">Start Date</p>
-            <p className="font-bold text-white">
-              {formData.startDate ? new Date(formData.startDate).toLocaleDateString('id-ID') : '-'}
+        <div className="grid grid-cols-2 gap-8">
+          <div className="bg-white/40 p-5 rounded-2xl border border-white/60 shadow-sm">
+            <p className="text-[10px] font-heading font-black text-aid-dark/30 mb-2 uppercase tracking-[0.2em]">Start Date</p>
+            <p className="font-heading font-black text-aid-dark">
+              {formData.startDate ? new Date(formData.startDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
             </p>
           </div>
-          <div>
-            <p className="text-slate-400 mb-1">End Date</p>
-            <p className="font-bold text-white">
-              {formData.endDate ? new Date(formData.endDate).toLocaleDateString('id-ID') : '-'}
+          <div className="bg-white/40 p-5 rounded-2xl border border-white/60 shadow-sm">
+            <p className="text-[10px] font-heading font-black text-aid-dark/30 mb-2 uppercase tracking-[0.2em]">End Date</p>
+            <p className="font-heading font-black text-aid-dark">
+              {formData.endDate ? new Date(formData.endDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : '-'}
             </p>
           </div>
         </div>
 
-        <div className="bg-gradient-to-r from-purple-900/20 to-cyan-900/20 border border-purple-500/20 rounded-lg p-4">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-slate-400">Total Items</span>
-            <span className="text-lg font-bold text-white">{totalItems} item(s)</span>
+        <div className="bg-aid-green/10 border-2 border-aid-green/20 rounded-[24px] p-6 shadow-lg shadow-aid-green/5">
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-[10px] font-heading font-black text-aid-dark/40 uppercase tracking-[0.2em]">Agreement Statistics</span>
+            <div className="flex gap-2">
+                <span className="bg-white/80 px-3 py-1 rounded-full text-[10px] font-black text-aid-dark shadow-sm uppercase tracking-wider">{totalItems} Types</span>
+                <span className="bg-white/80 px-3 py-1 rounded-full text-[10px] font-black text-aid-dark shadow-sm uppercase tracking-wider">{totalQuantity} Units</span>
+            </div>
           </div>
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-slate-400">Total Quantity</span>
-            <span className="text-lg font-bold text-white font-mono">{totalQuantity} units</span>
-          </div>
-          <div className="flex justify-between items-center pt-3 border-t border-white/10">
-            <span className="text-sm font-bold text-purple-400">Total Agreement Value</span>
-            <span className="text-2xl font-bold text-purple-400">
-              Rp {totalAmount.toLocaleString('id-ID')}
-            </span>
+          
+          <div className="flex justify-between items-end pt-4 border-t border-aid-green/20">
+            <span className="font-heading font-black text-aid-dark/40 uppercase tracking-[0.1em] text-xs pb-1">Total Agreement Value</span>
+            <div className="text-right">
+                <span className="block text-[10px] font-black text-aid-dark/30 uppercase tracking-[0.2em] mb-1">Estimated Total Cost</span>
+                <span className="text-3xl font-heading font-black text-aid-dark tracking-tighter">
+                  <span className="text-sm mr-1">IDR</span>
+                  {totalAmount.toLocaleString('id-ID')}
+                </span>
+            </div>
           </div>
         </div>
       </div>

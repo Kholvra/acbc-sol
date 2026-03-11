@@ -26,22 +26,22 @@ export function ItemsSection({ form }: ItemsSectionProps) {
   };
 
   return (
-    <div className="rounded-2xl p-6 bg-neutral-800 border border-neutral-700">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-bold text-white flex items-center gap-2">
-          <span className="w-1 h-5 bg-purple-500 rounded-full" />
+    <div className="rounded-[32px] p-8 bg-white/60 backdrop-blur-xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+      <div className="flex items-center justify-between mb-8">
+        <h3 className="text-xl font-heading font-black text-aid-dark flex items-center gap-3">
+          <span className="w-2 h-6 bg-aid-green rounded-full shadow-[0_0_10px_rgba(187,200,99,0.3)]" />
           Items Details
         </h3>
         <button
           type="button"
           onClick={addItem}
-          className="text-sm bg-purple-500 hover:bg-purple-400 text-white font-bold px-4 py-2 rounded-lg transition-all flex items-center gap-2"
+          className="text-xs bg-aid-dark hover:bg-aid-green text-white font-black px-6 py-3 rounded-2xl transition-all flex items-center gap-2 shadow-lg shadow-aid-dark/10 hover:shadow-aid-green/20 hover:scale-[1.02] active:scale-95 tracking-widest uppercase"
         >
-          <Plus size={16} /> Add Item
+          <Plus size={14} strokeWidth={3} /> Add Item
         </button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-6">
         {fields.map((field, index) => (
           <AgreementItemForm
             key={field.id}
@@ -53,8 +53,8 @@ export function ItemsSection({ form }: ItemsSectionProps) {
       </div>
 
       {fields.length === 0 && (
-        <div className="text-center py-8 text-slate-500 border-2 border-dashed border-slate-700 rounded-xl">
-          <p>No items added yet. Click &quot;Add Item&quot; to start.</p>
+        <div className="text-center py-12 text-aid-dark/30 border-2 border-dashed border-aid-dark/5 rounded-[24px] bg-aid-dark/[0.02]">
+          <p className="font-heading font-bold">No items added yet. Click &quot;Add Item&quot; to start.</p>
         </div>
       )}
     </div>

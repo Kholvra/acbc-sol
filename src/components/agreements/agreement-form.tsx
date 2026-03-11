@@ -84,55 +84,64 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
   return (
     <div>
       {/* Progress Steps */}
-      <div className="flex justify-center items-center gap-16 mb-12 relative">
-        <div className="absolute top-6 left-1/4 right-1/4 h-0.5 bg-slate-800 -z-10" />
+      <div className="relative mb-16 max-w-[320px] md:max-w-[440px] mx-auto px-6">
+        {/* Background track */}
+        <div className="absolute top-6 left-6 right-6 h-1 bg-aid-dark/10 rounded-full" />
+        
+        {/* Progress fill line */}
         <div
-          className="absolute top-6 h-0.5 bg-cyan-500 transition-all duration-700 -z-10"
-          style={{ width: `${((currentStep - 1) * 50)}%`, left: '25%' }}
+          className="absolute top-6 left-6 h-1 bg-aid-dark transition-all duration-500 ease-out rounded-full"
+          style={{
+            width: `calc(((100% - 48px) / ${steps.length - 1}) * ${currentStep - 1})`,
+          }}
         />
 
-        {steps.map((step) => (
-          <div key={step.id} className="flex flex-col items-center relative z-10">
-            <div
-              className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg transition-all
-                ${currentStep >= step.number
-                  ? 'bg-cyan-500 text-black shadow-[0_0_20px_rgba(6,182,212,0.4)]'
-                  : 'bg-slate-800 text-slate-500 border border-slate-700'
-                }`}
-            >
-              {step.number}
+        <div className="flex justify-between items-center relative z-10">
+          {steps.map((step) => (
+            <div key={step.id} className="flex flex-col items-center group">
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center font-heading font-black text-lg transition-all duration-500 transform
+                  ${currentStep >= step.number
+                    ? 'bg-aid-dark text-white shadow-[0_10px_20px_rgba(0,0,0,0.15)] scale-110'
+                    : 'bg-white text-aid-dark/40 border-2 border-aid-dark/20 backdrop-blur-sm'
+                  }`}
+              >
+                {step.number}
+              </div>
+              <span
+                className={`mt-3 text-[10px] md:text-xs font-heading font-black uppercase tracking-widest transition-colors duration-500 whitespace-nowrap
+                  ${currentStep >= step.number ? 'text-aid-dark' : 'text-aid-dark/30'}`}
+              >
+                {step.label}
+              </span>
             </div>
-            <span
-              className={`mt-2 text-xs font-medium uppercase tracking-wider transition-colors
-                ${currentStep >= step.number ? 'text-cyan-400' : 'text-slate-500'}`}
-            >
-              {step.label}
-            </span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      <form onSubmit={form.handleSubmit(handleFinalSubmit)} className="space-y-6">
+      <form onSubmit={form.handleSubmit(handleFinalSubmit)} className="space-y-8">
         {/* Step 1: All Input Sections */}
         {currentStep === 1 && (
           <>
-            <BasicInfoSection
-              control={form.control}
-              errors={form.formState.errors}
-            />
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <BasicInfoSection
+                  control={form.control}
+                  errors={form.formState.errors}
+                />
 
-            <ItemsSection form={form} />
+                <ItemsSection form={form} />
 
-            <ContractPeriodSection form={form} />
+                <ContractPeriodSection form={form} />
 
-            <PaymentTermsSection form={form} />
+                <PaymentTermsSection form={form} />
+            </div>
 
-            <div className="flex gap-4 pt-4">
+            <div className="flex gap-4 pt-6">
               <Button
                 type="button"
                 variant="outline"
                 onClick={onCancel}
-                className="flex-1 border-white/20 text-white hover:bg-white/10"
+                className="flex-1 border-2 border-aid-dark/10 text-aid-dark font-bold hover:bg-aid-dark/5 rounded-2xl py-4"
               >
                 Cancel
               </Button>
@@ -140,7 +149,7 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
                 type="button"
                 onClick={() => setCurrentStep(2)}
                 disabled={!canProceedToReview()}
-                className="flex-[2] bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold"
+                className="flex-[2] bg-aid-dark text-white font-black rounded-2xl py-4 shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
               >
                 Continue to Review →
               </Button>
@@ -150,56 +159,61 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
 
         {/* Step 2: Review */}
         {currentStep === 2 && (
-          <>
+          <div className="animate-in fade-in slide-in-from-right-4 duration-500">
             <FormSummary formData={form.getValues()} />
-            <div className="flex gap-4 pt-4">
+            <div className="flex gap-4 pt-8">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setCurrentStep(1)}
-                className="flex-1 border-white/20 text-white hover:bg-white/10"
+                className="flex-1 border-2 border-aid-dark/10 text-aid-dark font-bold hover:bg-aid-dark/5 rounded-2xl py-4"
               >
                 ← Back
               </Button>
               <Button
                 type="button"
                 onClick={() => setCurrentStep(3)}
-                className="flex-[2] bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold"
+                className="flex-[2] bg-aid-dark text-white font-black rounded-2xl py-4 shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
               >
                 Confirm & Submit →
               </Button>
             </div>
-          </>
+          </div>
         )}
 
         {/* Step 3: Final Submit */}
         {currentStep === 3 && (
-          <>
+          <div className="animate-in fade-in zoom-in-95 duration-500">
             <FormSummary formData={form.getValues()} />
-            <div className="bg-gradient-to-r from-purple-900/20 to-cyan-900/20 border border-purple-500/20 rounded-lg p-6 text-center">
-              <p className="text-white font-bold mb-2">Ready to Submit</p>
-              <p className="text-sm text-slate-400">
+            <div className="mt-8 bg-aid-green/10 border-2 border-aid-green/20 rounded-3xl p-8 text-center backdrop-blur-sm">
+              <div className="w-16 h-16 bg-aid-green rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-aid-green/20">
+                <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="text-aid-dark font-heading font-black text-xl mb-2">Ready to Submit</p>
+              <p className="text-aid-dark/60 font-medium max-w-sm mx-auto">
                 By submitting, you agree to the terms and confirm that all information provided is accurate.
               </p>
             </div>
-            <div className="flex gap-4 pt-4">
+            <div className="flex gap-4 pt-8">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setCurrentStep(2)}
-                className="flex-1 border-white/20 text-white hover:bg-white/10"
+                className="flex-1 border-2 border-aid-dark/10 text-aid-dark font-bold hover:bg-aid-dark/5 rounded-2xl py-4"
               >
                 ← Back
               </Button>
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-[2] bg-gradient-to-r from-green-500 to-green-600 text-white font-bold hover:scale-105 transition-transform"
+                className="flex-[2] bg-aid-green text-white font-black rounded-2xl py-4 shadow-xl hover:shadow-aid-green/20 hover:scale-[1.02] active:scale-95 transition-all"
               >
                 {isSubmitting ? 'Submitting...' : '✓ Submit Agreement'}
               </Button>
             </div>
-          </>
+          </div>
         )}
       </form>
     </div>

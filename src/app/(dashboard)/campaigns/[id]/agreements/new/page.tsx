@@ -1,19 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { AgreementForm } from '~/components/agreements/agreement-form';
 import type { AgreementFormData } from '~/components/agreements/schemas';
+import TikTokLayout from '~/components/layout/tiktok-layout';
+import { toast } from 'sonner';
 
 interface NewAgreementPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default function NewAgreementPage({ params }: NewAgreementPageProps) {
   const router = useRouter();
-  const campaignId = params.id;
+  const { id: campaignId } = use(params);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const handleSubmit = async (data: AgreementFormData) => {
@@ -22,8 +24,10 @@ export default function NewAgreementPage({ params }: NewAgreementPageProps) {
     console.log('Campaign ID:', campaignId);
     console.log(JSON.stringify(data, null, 2));
 
-    // Show success message (Phase 1 - using alert, will use toast later)
-    alert('Agreement created successfully!\n\nCheck console for submitted data.');
+    // Show success message
+    toast.success('Agreement created successfully!', {
+        description: 'Check console for submitted data.'
+    });
   };
 
   const handleCancel = () => {
@@ -36,55 +40,62 @@ export default function NewAgreementPage({ params }: NewAgreementPageProps) {
   };
 
   return (
-    <>
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Create Purchase Agreement</h1>
-          <p className="text-slate-400">
+    <TikTokLayout>
+      <div className="max-w-5xl mx-auto px-4 py-12 md:py-20 min-h-screen">
+        <div className="mb-10 text-center md:text-left">
+          <h1 className="text-4xl font-heading font-black text-aid-dark mb-3 tracking-tight">
+            Create Purchase Agreement
+          </h1>
+          <p className="text-aid-dark/60 font-medium max-w-2xl">
             Initiate a new purchase agreement for campaign. This will be sent for approval after submission.
           </p>
         </div>
 
-        <AgreementForm
-          campaignId={campaignId}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-        />
+        <div className="mb-24">
+            <AgreementForm
+              campaignId={campaignId}
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+            />
+        </div>
       </div>
 
       {/* Cancel Confirmation Modal */}
       {showCancelConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/40 backdrop-blur-md transition-all"
             onClick={() => setShowCancelConfirm(false)}
           />
 
           {/* Modal */}
-          <div className="relative bg-neutral-800 border border-neutral-700 rounded-2xl p-6 max-w-md mx-4 shadow-2xl w-full">
-            <h3 className="text-xl font-bold text-white mb-2">Cancel Form?</h3>
-            <p className="text-slate-400 mb-6">
-              All unsaved data will be lost. Are you sure you want to cancel?
+          <div className="relative bg-white/80 backdrop-blur-2xl border border-white/60 rounded-[32px] p-8 max-w-md w-full shadow-[0_20px_50px_rgba(0,0,0,0.1)] overflow-hidden">
+             {/* Gradient Accent */}
+             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-red-400 to-orange-400" />
+            
+            <h3 className="text-2xl font-heading font-black text-aid-dark mb-3">Cancel Form?</h3>
+            <p className="text-aid-dark/60 font-medium mb-8 leading-relaxed">
+              All unsaved data will be lost. Are you sure you want to cancel this agreement?
             </p>
 
-            <div className="flex gap-3">
+            <div className="flex gap-4">
               <button
                 onClick={() => setShowCancelConfirm(false)}
-                className="flex-1 px-4 py-2 border border-white/20 text-white rounded-lg hover:bg-white/10 transition-colors"
+                className="flex-1 px-6 py-4 border-2 border-aid-dark/10 text-aid-dark font-bold rounded-2xl hover:bg-aid-dark/5 transition-all"
               >
-                Back
+                Go Back
               </button>
               <button
                 onClick={handleConfirmCancel}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                className="flex-1 px-6 py-4 bg-red-500 text-white font-bold rounded-2xl hover:bg-red-600 shadow-lg shadow-red-500/20 transition-all hover:scale-[1.02] active:scale-95"
               >
-                Confirm
+                Yes, Cancel
               </button>
             </div>
           </div>
         </div>
       )}
-    </>
+    </TikTokLayout>
   );
 }
