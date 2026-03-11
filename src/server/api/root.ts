@@ -1,4 +1,5 @@
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
+import { campaignRouter } from "~/server/api/routers/campaign";
 import { kycRouter } from "~/server/api/routers/kyc";
 import { userRouter } from "./routers/user";
 
@@ -8,6 +9,7 @@ import { userRouter } from "./routers/user";
  * All routers added in /api/routers should be manually added here.
  */
 export const appRouter = createTRPCRouter({
+  campaign: campaignRouter,
   kyc: kycRouter,
   user: userRouter,
 });
