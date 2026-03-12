@@ -28,8 +28,12 @@ export function FormInput({
   onChange,
   value,
 }: FormInputProps) {
-  const baseInputClasses = `w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-aid-dark font-medium placeholder:text-gray-400 focus:border-aid-green focus:bg-white focus:ring-2 focus:ring-aid-green/20 outline-none transition-all ${
+  const baseInputClasses = `w-full bg-gray-50 border rounded-xl px-4 py-3 text-aid-dark font-medium placeholder:text-gray-400 focus:bg-white outline-none transition-all ${
     type === 'number' ? 'text-right font-bold' : ''
+  } ${
+    error
+      ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-200 bg-red-50/30'
+      : 'border-gray-200 focus:border-aid-green focus:ring-2 focus:ring-aid-green/20'
   } ${className}`;
 
   const labelClasses =

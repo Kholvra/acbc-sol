@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useForm, type UseFormReturn } from 'react-hook-form';
+import { useState, useRef, useEffect } from 'react';
+import { useForm, type UseFormReturn, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { agreementFormSchema, type AgreementFormData, getDefaultEndDate, DEFAULT_CONTRACT_DAYS } from './schemas';
 import { BasicInfoSection } from './basic-info-section';
@@ -11,6 +11,55 @@ import { PaymentTermsSection } from './payment-terms-section';
 import { FormSummary } from './form-summary';
 import { Stepper } from '~/components/ui/stepper';
 import Button from '~/components/ui/button';
+
+const scrollToFirstError = (errors: FieldErrors<AgreementFormData>) => {
+  // check top-level fields first
+  const topLevelOrder: (keyof AgreementFormData)[] = ['vendorName', 'category', 'startDate', 'endDate', 'paymentTerms'];
+  
+  for (const fieldName of topLevelOrder) {
+    if (errors[fieldName]) {
+      const element = document.querySelector(`[data-error-field="${String(fieldName)}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+  }
+  
+  // check items array errors
+  if (errors.items) {
+    const itemsError = errors.items;
+    
+    // array-level error
+    if (typeof itemsError === 'object' && 'message' in itemsError) {
+      const element = document.querySelector('[data-error-field="items"]');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+    
+    // individual item errors
+    if (Array.isArray(itemsError)) {
+      for (let i = 0; i < itemsError.length; i++) {
+        const itemError = itemsError[i] as { itemName?: { message?: string }; unitPrice?: { message?: string }; quantity?: { message?: string } } | undefined;
+        if (itemError) {
+          // check which field has error
+          const itemFieldOrder = ['itemName', 'unitPrice', 'quantity'] as const;
+          for (const itemField of itemFieldOrder) {
+            if (itemError[itemField]?.message) {
+              const element = document.querySelector(`[data-error-field="items.${i}.${itemField}"]`);
+              if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+};
 
 interface AgreementFormProps {
   campaignId: string;
@@ -61,7 +110,7 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
       if (onSubmit) {
         await onSubmit(data);
       } else {
-        // Default: log to console for Phase 1
+        // default: log to console for phase 1
         console.log('=== FORM SUBMITTED ===');
         console.log(JSON.stringify(data, null, 2));
         alert('Form submitted! Check console for data.');
@@ -74,43 +123,25 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
   };
 
   const handleNextStep = async (targetStep: number) => {
-    // Validate current section before moving to next step
     if (targetStep === 2) {
-      // Validate step 1 fields: vendorName, category, items, startDate, endDate, paymentTerms
+      // validate step 1 fields
       const isValid = await form.trigger(['vendorName', 'category', 'items', 'startDate', 'endDate', 'paymentTerms']);
-      if (!isValid) return;
+      if (!isValid) {
+        setTimeout(() => {
+          scrollToFirstError(form.formState.errors);
+        }, 100);
+        return;
+      }
     }
     setCurrentStep(targetStep);
   };
 
-  const hasErrors = Object.keys(form.formState.errors).length > 0;
-
   return (
     <div>
-      {/* Error Summary Banner */}
-      {hasErrors && currentStep === 1 && (
-        <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-2xl animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-              <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              <p className="font-bold text-red-800 text-sm">Mohon lengkapi semua field yang wajib</p>
-              <p className="text-red-600 text-xs mt-1">
-                Scroll ke atas untuk melihat error di setiap section
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Progress Steps */}
       <Stepper steps={steps} currentStep={currentStep} />
 
       <form onSubmit={form.handleSubmit(handleFinalSubmit)} className="space-y-8">
-        {/* Step 1: All Input Sections */}
+        {/* step 1: input sections */}
         {currentStep === 1 && (
           <>
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -149,7 +180,7 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
           </>
         )}
 
-        {/* Step 2: Review */}
+        {/* step 2: review */}
         {currentStep === 2 && (
           <div className="animate-in fade-in slide-in-from-right-4 duration-500">
             <FormSummary formData={form.getValues()} />
@@ -176,7 +207,7 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
           </div>
         )}
 
-        {/* Step 3: Final Submit */}
+        {/* step 3: submit */}
         {currentStep === 3 && (
           <div className="animate-in fade-in zoom-in-95 duration-500">
             <FormSummary formData={form.getValues()} />

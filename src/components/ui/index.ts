@@ -1,4 +1,3 @@
-// UI Components Barrel Export
 export { default as Button } from './button';
 export { FormSection } from './form-section';
 export { FormInput } from './form-input';

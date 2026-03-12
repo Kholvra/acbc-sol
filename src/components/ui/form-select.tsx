@@ -27,7 +27,11 @@ export function FormSelect({
   onChange,
   value,
 }: FormSelectProps) {
-  const baseSelectClasses = `w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-aid-dark font-medium appearance-none focus:border-aid-green focus:bg-white focus:ring-2 focus:ring-aid-green/20 outline-none transition-all cursor-pointer ${className}`;
+  const baseSelectClasses = `w-full bg-gray-50 border rounded-xl px-4 py-3 text-aid-dark font-medium appearance-none focus:bg-white outline-none transition-all cursor-pointer ${
+    error
+      ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-200 bg-red-50/30'
+      : 'border-gray-200 focus:border-aid-green focus:ring-2 focus:ring-aid-green/20'
+  } ${className}`;
 
   const labelClasses =
     'block text-xs font-heading font-bold text-gray-600 mb-2';

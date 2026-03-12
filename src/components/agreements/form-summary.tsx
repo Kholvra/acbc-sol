@@ -37,7 +37,6 @@ export function FormSummary({ formData }: FormSummaryProps) {
   return (
     <FormSection title="Review Summary">
       <div className="space-y-8">
-        {/* Vendor & Category */}
         <div className="grid grid-cols-2 gap-8">
           <SummaryCard label="Vendor" value={formData.vendorName} />
           <SummaryCard
@@ -46,7 +45,6 @@ export function FormSummary({ formData }: FormSummaryProps) {
           />
         </div>
 
-        {/* Items List */}
         <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
           <p className="text-xs font-heading font-bold text-gray-500 mb-4">
             Items List
@@ -79,7 +77,6 @@ export function FormSummary({ formData }: FormSummaryProps) {
           </ul>
         </div>
 
-        {/* Dates */}
         <div className="grid grid-cols-2 gap-8">
           <SummaryCard
             label="Start Date"
@@ -91,7 +88,6 @@ export function FormSummary({ formData }: FormSummaryProps) {
           />
         </div>
 
-        {/* Total Amount - Highlight */}
         <div className="bg-aid-green/10 border border-aid-green/30 rounded-2xl p-6">
           <div className="flex justify-between items-center mb-4">
             <span className="text-xs font-heading font-bold text-gray-600">

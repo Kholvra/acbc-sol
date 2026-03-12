@@ -27,14 +27,16 @@ export function PaymentTermsSection({ form }: PaymentTermsSectionProps) {
 
   return (
     <FormSection title="Payment Terms" accentColor="yellow">
-      <RadioCardGroup
-        name="paymentTerms"
-        options={paymentOptions}
-        value={selectedTerms}
-        onChange={(value) => form.setValue('paymentTerms', value as 'FULL_PAYMENT' | 'INSTALLMENT')}
-        register={form.register('paymentTerms')}
-        error={form.formState.errors.paymentTerms?.message}
-      />
+      <div data-error-field="paymentTerms">
+        <RadioCardGroup
+          name="paymentTerms"
+          options={paymentOptions}
+          value={selectedTerms}
+          onChange={(value) => form.setValue('paymentTerms', value as 'FULL_PAYMENT' | 'INSTALLMENT')}
+          register={form.register('paymentTerms')}
+          error={form.formState.errors.paymentTerms?.message}
+        />
+      </div>
     </FormSection>
   );
 }

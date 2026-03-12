@@ -24,20 +24,24 @@ export function BasicInfoSection({ control, errors }: BasicInfoSectionProps) {
   return (
     <FormSection title="Basic Information">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <FormInput
-          label="Vendor Name *"
-          type="text"
-          placeholder="e.g., Apotek K24"
-          error={errors?.vendorName?.message}
-          register={control.register('vendorName')}
-        />
-        <FormSelect
-          label="Category *"
-          options={CATEGORIES}
-          placeholder="Select category"
-          error={errors?.category?.message}
-          register={control.register('category')}
-        />
+        <div data-error-field="vendorName">
+          <FormInput
+            label="Vendor Name *"
+            type="text"
+            placeholder="e.g., Apotek K24"
+            error={errors?.vendorName?.message}
+            register={control.register('vendorName')}
+          />
+        </div>
+        <div data-error-field="category">
+          <FormSelect
+            label="Category *"
+            options={CATEGORIES}
+            placeholder="Select category"
+            error={errors?.category?.message}
+            register={control.register('category')}
+          />
+        </div>
       </div>
     </FormSection>
   );

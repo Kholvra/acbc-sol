@@ -16,10 +16,8 @@ interface StepperProps {
 export function Stepper({ steps, currentStep, className = '' }: StepperProps) {
   return (
     <div className={`relative mb-12 max-w-md mx-auto ${className}`}>
-      {/* Background track */}
       <div className="absolute top-5 left-8 right-8 h-0.5 bg-gray-200 rounded-full" />
 
-      {/* Progress fill line */}
       <div
         className="absolute top-5 left-8 h-0.5 bg-aid-green transition-all duration-500 ease-out rounded-full"
         style={{

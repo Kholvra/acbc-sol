@@ -19,7 +19,6 @@ export function ContractPeriodSection({ form }: ContractPeriodSectionProps) {
   const startDateValue = form.watch('startDate');
   const endDateValue = form.watch('endDate');
 
-  // Calculate days between dates
   const daysDiff = startDateValue && endDateValue
     ? Math.ceil((new Date(endDateValue).getTime() - new Date(startDateValue).getTime()) / MILLISECONDS_PER_DAY)
     : 0;
@@ -27,20 +26,24 @@ export function ContractPeriodSection({ form }: ContractPeriodSectionProps) {
   return (
     <FormSection title="Contract Period">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <FormInput
-          label="Start Date *"
-          type="date"
-          min={new Date().toISOString().split('T')[0]}
-          error={form.formState.errors.startDate?.message}
-          register={form.register('startDate')}
-        />
-        <FormInput
-          label="End Date *"
-          type="date"
-          min={tomorrow.toISOString().split('T')[0]}
-          error={form.formState.errors.endDate?.message}
-          register={form.register('endDate')}
-        />
+        <div data-error-field="startDate">
+          <FormInput
+            label="Start Date *"
+            type="date"
+            min={new Date().toISOString().split('T')[0]}
+            error={form.formState.errors.startDate?.message}
+            register={form.register('startDate')}
+          />
+        </div>
+        <div data-error-field="endDate">
+          <FormInput
+            label="End Date *"
+            type="date"
+            min={tomorrow.toISOString().split('T')[0]}
+            error={form.formState.errors.endDate?.message}
+            register={form.register('endDate')}
+          />
+        </div>
       </div>
       {daysDiff > 0 && (
         <div className="mt-6">

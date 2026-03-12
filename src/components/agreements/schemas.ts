@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-// Constants
 export const DEFAULT_CONTRACT_DAYS = 7;
 export const MILLISECONDS_PER_DAY = 1000 * 60 * 60 * 24;
 
@@ -24,7 +23,7 @@ export const agreementItemSchema = z.object({
   quantity: z.number().int().min(1, 'Quantity must be at least 1'),
 });
 
-// Base schema without refinements (for extend usage)
+// base schema without refinements
 const _agreementFormBaseSchema = z.object({
   campaignId: z.string().min(1, 'Campaign ID is required'),
   vendorName: z.string().min(1, 'Vendor name is required'),
@@ -35,7 +34,7 @@ const _agreementFormBaseSchema = z.object({
   paymentTerms: paymentTermsSchema,
 }).strict();
 
-// Schema with refinements (for form validation)
+// schema with refinements
 export const agreementFormSchema = _agreementFormBaseSchema.refine(
   (data) => new Date(data.endDate) > new Date(data.startDate),
   {
@@ -56,12 +55,11 @@ export const agreementFormSchema = _agreementFormBaseSchema.refine(
   }
 );
 
-// Helper to get default end date
 export const getDefaultEndDate = (startDate: Date = new Date(), days: number = DEFAULT_CONTRACT_DAYS): Date => {
   return new Date(startDate.getTime() + (days * MILLISECONDS_PER_DAY));
 };
 
-// Schema for agreements with metadata (for list page, backend response)
+// schema with metadata
 export const agreementWithMetaSchema = _agreementFormBaseSchema.extend({
   id: z.string(),
   status: z.enum(['PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'COMPLETED']),

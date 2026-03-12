@@ -40,9 +40,8 @@ export function ItemsSection({ form, errors }: ItemsSectionProps) {
       title="Items Details"
       className="relative"
     >
-      {/* Array-level error */}
       {arrayError && (
-        <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-2xl">
+        <div data-error-field="items" className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-2xl">
           <p className="text-sm text-red-600 font-medium">{arrayError}</p>
         </div>
       )}

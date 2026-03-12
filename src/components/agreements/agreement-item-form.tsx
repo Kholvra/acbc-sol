@@ -52,37 +52,45 @@ export function AgreementItemForm({ control, index, onRemove, errors }: Agreemen
       </div>
 
       <div className="space-y-6 relative z-10">
-        <FormInput
-          label="Item Name *"
-          type="text"
-          placeholder="e.g., Paracetamol 500mg"
-          register={control.register(`items.${index}.itemName`)}
-          error={errors?.itemName?.message}
-        />
+        <div data-error-field={`items.${index}.itemName`}>
+          <FormInput
+            label="Item Name *"
+            type="text"
+            placeholder="e.g., Paracetamol 500mg"
+            register={control.register(`items.${index}.itemName`)}
+            error={errors?.itemName?.message}
+          />
+        </div>
 
-        <FormInput
-          label="Specifications"
-          type="textarea"
-          placeholder="e.g., Box isi 100 tablet"
-          register={control.register(`items.${index}.specifications`)}
-          error={errors?.specifications?.message}
-        />
+        <div data-error-field={`items.${index}.specifications`}>
+          <FormInput
+            label="Specifications"
+            type="textarea"
+            placeholder="e.g., Box isi 100 tablet"
+            register={control.register(`items.${index}.specifications`)}
+            error={errors?.specifications?.message}
+          />
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <FormInput
-            label="Price per Unit (IDR) *"
-            type="number"
-            prefix="Rp"
-            register={control.register(`items.${index}.unitPrice`, { valueAsNumber: true })}
-            error={errors?.unitPrice?.message}
-          />
+          <div data-error-field={`items.${index}.unitPrice`}>
+            <FormInput
+              label="Price per Unit (IDR) *"
+              type="number"
+              prefix="Rp"
+              register={control.register(`items.${index}.unitPrice`, { valueAsNumber: true })}
+              error={errors?.unitPrice?.message}
+            />
+          </div>
 
-          <FormInput
-            label="Quantity *"
-            type="number"
-            register={control.register(`items.${index}.quantity`, { valueAsNumber: true })}
-            error={errors?.quantity?.message}
-          />
+          <div data-error-field={`items.${index}.quantity`}>
+            <FormInput
+              label="Quantity *"
+              type="number"
+              register={control.register(`items.${index}.quantity`, { valueAsNumber: true })}
+              error={errors?.quantity?.message}
+            />
+          </div>
 
           <div>
             <label className="block text-xs font-heading font-bold text-gray-600 mb-2">
