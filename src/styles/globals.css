@@ -64,6 +64,30 @@
   }
 }
 
+/* Form Input Enhancements */
+@layer base {
+  /* Hide number input spinner */
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+
+  /* Consistent placeholder styling */
+  ::placeholder {
+    color: #9ca3af;
+    opacity: 1;
+  }
+
+  input:focus::placeholder,
+  textarea:focus::placeholder {
+    color: #d1d5db;
+  }
+}
 
 div[data-radix-portal] {
   z-index: 9999 !important;

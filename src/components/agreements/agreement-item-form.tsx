@@ -5,6 +5,7 @@ import type { Control, FieldError } from 'react-hook-form';
 import { X } from 'lucide-react';
 import type { AgreementFormData } from './schemas';
 import { FormInput } from '~/components/ui/form-input';
+import { FormCurrencyInput } from '~/components/ui/form-currency-input';
 import Button from '~/components/ui/button';
 
 interface AgreementItemFormProps {
@@ -25,7 +26,12 @@ export function AgreementItemForm({ control, index, onRemove, errors }: Agreemen
     name: `items.${index}`,
   });
 
-  const subtotal = (item?.unitPrice ?? 0) * (item?.quantity ?? 1);
+  // Parse unitPrice in case it's a formatted string (e.g., "1.000.000")
+  const unitPrice = typeof item?.unitPrice === 'string'
+    ? parseFloat(item.unitPrice.replace(/\./g, '')) || 0
+    : (item?.unitPrice ?? 0);
+
+  const subtotal = unitPrice * (item?.quantity ?? 1);
 
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-6 group hover:border-aid-green/50 transition-all duration-200 shadow-sm relative overflow-hidden">
@@ -74,11 +80,10 @@ export function AgreementItemForm({ control, index, onRemove, errors }: Agreemen
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div data-error-field={`items.${index}.unitPrice`}>
-            <FormInput
+            <FormCurrencyInput
               label="Price per Unit (IDR) *"
-              type="number"
-              prefix="Rp"
-              register={control.register(`items.${index}.unitPrice`, { valueAsNumber: true })}
+              register={control.register(`items.${index}.unitPrice`)}
+              value={item?.unitPrice}
               error={errors?.unitPrice?.message}
             />
           </div>

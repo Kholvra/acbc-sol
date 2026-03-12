@@ -2,6 +2,8 @@ export { default as Button } from './button';
 export { FormSection } from './form-section';
 export { FormInput } from './form-input';
 export { FormSelect } from './form-select';
+export { CustomSelect } from './custom-select';
+export { FormCurrencyInput } from './form-currency-input';
 export { RadioCardGroup } from './radio-card-group';
 export { DurationBadge } from './duration-badge';
 export { EmptyState } from './empty-state';

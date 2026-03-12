@@ -8,9 +8,18 @@ interface FormSummaryProps {
   formData: AgreementFormData;
 }
 
+// Helper to parse unitPrice that might be a formatted string
+const parseUnitPrice = (val: unknown): number => {
+  if (typeof val === 'number') return val;
+  if (typeof val === 'string') {
+    return parseFloat(val.replace(/\./g, '')) || 0;
+  }
+  return 0;
+};
+
 export function FormSummary({ formData }: FormSummaryProps) {
   const totalAmount = formData.items.reduce(
-    (sum, item) => sum + (item.unitPrice * item.quantity),
+    (sum, item) => sum + (parseUnitPrice(item.unitPrice) * item.quantity),
     0
   );
 
@@ -50,30 +59,33 @@ export function FormSummary({ formData }: FormSummaryProps) {
             Items List
           </p>
           <ul className="space-y-3">
-            {formData.items.map((item, i) => (
-              <li
-                key={i}
-                className="flex justify-between items-center group transition-all"
-              >
-                <div className="flex flex-col">
-                  <span className="font-heading font-bold text-aid-dark text-sm">
-                    {item.itemName}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    Qty: {item.quantity} units
-                  </span>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="font-heading font-bold text-aid-dark">
-                    <span className="text-xs text-gray-400 mr-1">IDR</span>
-                    {(item.unitPrice * item.quantity).toLocaleString('id-ID')}
-                  </span>
-                  <span className="text-xs text-gray-400">
-                    Rp {item.unitPrice.toLocaleString('id-ID')} / unit
-                  </span>
-                </div>
-              </li>
-            ))}
+            {formData.items.map((item, i) => {
+              const unitPrice = parseUnitPrice(item.unitPrice);
+              return (
+                <li
+                  key={i}
+                  className="flex justify-between items-center group transition-all"
+                >
+                  <div className="flex flex-col">
+                    <span className="font-heading font-bold text-aid-dark text-sm">
+                      {item.itemName}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      Qty: {item.quantity} units
+                    </span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="font-heading font-bold text-aid-dark">
+                      <span className="text-xs text-gray-400 mr-1">IDR</span>
+                      {(unitPrice * item.quantity).toLocaleString('id-ID')}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      Rp {unitPrice.toLocaleString('id-ID')} / unit
+                    </span>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
 

@@ -16,10 +16,40 @@ export const expenseCategorySchema = z.enum([
 
 export const paymentTermsSchema = z.enum(['FULL_PAYMENT', 'INSTALLMENT']);
 
+/**
+ * Parse Indonesian number format (e.g., "1.000.000" -> 1000000)
+ * @param val - Value to parse (number, string, or unknown)
+ * @returns Parsed number, or undefined if invalid
+ */
+export const parseIndonesianNumber = (val: unknown): number | undefined => {
+  // Already a number - return as-is
+  if (typeof val === 'number') return val;
+  
+  // Parse string - remove thousands separator (dots in Indonesian format)
+  if (typeof val === 'string' && val.trim() !== '') {
+    const cleaned = val.replace(/\./g, '');
+    const parsed = parseFloat(cleaned);
+    // Return undefined for NaN (invalid input)
+    if (isNaN(parsed)) return undefined;
+    return parsed;
+  }
+  
+  // Return undefined for other types (let validation catch it)
+  return undefined;
+};
+
 export const agreementItemSchema = z.object({
   itemName: z.string().min(1, 'Item name is required'),
   specifications: z.string().optional(),
-  unitPrice: z.number().min(0, 'Price must be positive'),
+  unitPrice: z.preprocess(
+    (val) => parseIndonesianNumber(val),
+    z.number({ 
+      required_error: 'Price is required', 
+      invalid_type_error: 'Invalid price format' 
+    })
+      .min(0, 'Price must be positive')
+      .max(1_000_000_000_000, 'Price exceeds maximum allowed value')
+  ),
   quantity: z.number().int().min(1, 'Quantity must be at least 1'),
 });
 
