@@ -88,8 +88,9 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form: UseFormReturn<AgreementFormData> = useForm<AgreementFormData>({
-    resolver: zodResolver(agreementFormSchema),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const form = useForm<AgreementFormData>({
+    resolver: zodResolver(agreementFormSchema) as any,
     mode: 'onChange',
     reValidateMode: 'onChange',
     defaultValues: {

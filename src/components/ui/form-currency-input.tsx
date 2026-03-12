@@ -26,10 +26,12 @@ export function FormCurrencyInput({
   // Combine refs when component mounts
   useEffect(() => {
     if (inputRef.current && register?.ref) {
-      if (typeof register.ref === 'function') {
-        register.ref(inputRef.current);
-      } else {
-        register.ref.current = inputRef.current;
+      const ref = register.ref;
+      if (typeof ref === 'function') {
+        ref(inputRef.current);
+      } else if (ref && 'current' in ref) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (ref as any).current = inputRef.current;
       }
     }
   }, [register?.ref]);
