@@ -80,8 +80,30 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
     setCurrentStep(targetStep);
   };
 
+  // Get first error message for summary display
+  const firstError = form.formState.errors;
+  const hasErrors = Object.keys(form.formState.errors).length > 0;
+
   return (
     <div>
+      {/* Error Summary Banner */}
+      {hasErrors && currentStep === 1 && (
+        <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-2xl animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-bold text-red-800 text-sm">Mohon lengkapi semua field yang wajib</p>
+              <p className="text-red-600 text-xs mt-1">
+                Scroll ke atas untuk melihat error di setiap section
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Progress Steps */}
       <div className="relative mb-16 max-w-[320px] md:max-w-[440px] mx-auto px-6">
         {/* Background track - dari tengah step 1 ke tengah step 3 */}
