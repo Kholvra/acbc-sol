@@ -7,6 +7,7 @@ import type { AgreementFormData } from './schemas';
 import { AgreementItemForm } from './agreement-item-form';
 import { FormSection } from '~/components/ui/form-section';
 import { EmptyState } from '~/components/ui/empty-state';
+import Button from '~/components/ui/button';
 
 interface ItemsSectionProps {
   form: UseFormReturn<AgreementFormData>;
@@ -38,13 +39,15 @@ export function ItemsSection({ form }: ItemsSectionProps) {
             Add all items for this purchase agreement
           </span>
         </div>
-        <button
+        <Button
           type="button"
           onClick={addItem}
-          className="text-xs bg-aid-dark hover:bg-aid-green text-white font-black px-6 py-3 rounded-2xl transition-all flex items-center gap-2 shadow-lg shadow-aid-dark/10 hover:shadow-aid-green/20 hover:scale-[1.02] active:scale-95 tracking-widest uppercase"
+          variant="primary"
+          size="md"
+          leftIcon={<Plus size={16} strokeWidth={3} />}
         >
-          <Plus size={14} strokeWidth={3} /> Add Item
-        </button>
+          Add Item
+        </Button>
       </div>
 
       <div className="space-y-6">

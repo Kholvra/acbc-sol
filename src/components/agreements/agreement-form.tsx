@@ -128,15 +128,18 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
               <Button
                 type="button"
                 variant="outline"
+                size="lg"
                 onClick={onCancel}
-                className="flex-1 border-2 border-aid-dark/10 text-aid-dark font-bold hover:bg-aid-dark/5 rounded-2xl py-4"
+                className="flex-1"
               >
                 Cancel
               </Button>
               <Button
                 type="button"
+                variant="primary"
+                size="lg"
                 onClick={() => handleNextStep(2)}
-                className="flex-[2] bg-aid-dark text-white font-black rounded-2xl py-4 shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
+                className="flex-[2]"
               >
                 Continue to Review →
               </Button>
@@ -152,15 +155,18 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
               <Button
                 type="button"
                 variant="outline"
+                size="lg"
                 onClick={() => setCurrentStep(1)}
-                className="flex-1 border-2 border-aid-dark/10 text-aid-dark font-bold hover:bg-aid-dark/5 rounded-2xl py-4"
+                className="flex-1"
               >
                 ← Back
               </Button>
               <Button
                 type="button"
+                variant="primary"
+                size="lg"
                 onClick={() => handleNextStep(3)}
-                className="flex-[2] bg-aid-dark text-white font-black rounded-2xl py-4 shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
+                className="flex-[2]"
               >
                 Confirm & Submit →
               </Button>
@@ -187,17 +193,20 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
               <Button
                 type="button"
                 variant="outline"
+                size="lg"
                 onClick={() => setCurrentStep(2)}
-                className="flex-1 border-2 border-aid-dark/10 text-aid-dark font-bold hover:bg-aid-dark/5 rounded-2xl py-4"
+                className="flex-1"
               >
                 ← Back
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting}
-                className="flex-[2] bg-aid-green text-white font-black rounded-2xl py-4 shadow-xl hover:shadow-aid-green/20 hover:scale-[1.02] active:scale-95 transition-all"
+                variant="success"
+                size="lg"
+                isLoading={isSubmitting}
+                className="flex-[2]"
               >
-                {isSubmitting ? 'Submitting...' : '✓ Submit Agreement'}
+                ✓ Submit Agreement
               </Button>
             </div>
           </div>

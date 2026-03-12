@@ -47,8 +47,8 @@ export function FormSummary({ formData }: FormSummaryProps) {
         </div>
 
         {/* Items List */}
-        <div className="bg-white/40 rounded-2xl border border-white/60 p-6 shadow-sm">
-          <p className="text-[10px] font-heading font-black text-aid-dark/30 mb-4 uppercase tracking-[0.2em]">
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+          <p className="text-xs font-heading font-bold text-gray-500 mb-4">
             Items List
           </p>
           <ul className="space-y-3">
@@ -58,19 +58,19 @@ export function FormSummary({ formData }: FormSummaryProps) {
                 className="flex justify-between items-center group transition-all"
               >
                 <div className="flex flex-col">
-                  <span className="font-heading font-black text-aid-dark text-sm">
+                  <span className="font-heading font-bold text-aid-dark text-sm">
                     {item.itemName}
                   </span>
-                  <span className="text-[10px] font-bold text-aid-dark/40 uppercase tracking-widest">
+                  <span className="text-xs text-gray-500">
                     Qty: {item.quantity} units
                   </span>
                 </div>
                 <div className="flex flex-col items-end">
-                  <span className="font-heading font-black text-aid-dark">
-                    <span className="text-[10px] text-aid-dark/30 mr-1">IDR</span>
+                  <span className="font-heading font-bold text-aid-dark">
+                    <span className="text-xs text-gray-400 mr-1">IDR</span>
                     {(item.unitPrice * item.quantity).toLocaleString('id-ID')}
                   </span>
-                  <span className="text-[10px] text-aid-dark/30 font-bold">
+                  <span className="text-xs text-gray-400">
                     Rp {item.unitPrice.toLocaleString('id-ID')} / unit
                   </span>
                 </div>
@@ -92,31 +92,31 @@ export function FormSummary({ formData }: FormSummaryProps) {
         </div>
 
         {/* Total Amount - Highlight */}
-        <div className="bg-aid-green/10 border-2 border-aid-green/20 rounded-[24px] p-6 shadow-lg shadow-aid-green/5">
+        <div className="bg-aid-green/10 border border-aid-green/30 rounded-2xl p-6">
           <div className="flex justify-between items-center mb-4">
-            <span className="text-[10px] font-heading font-black text-aid-dark/40 uppercase tracking-[0.2em]">
+            <span className="text-xs font-heading font-bold text-gray-600">
               Agreement Statistics
             </span>
             <div className="flex gap-2">
-              <span className="bg-white/80 px-3 py-1 rounded-full text-[10px] font-black text-aid-dark shadow-sm uppercase tracking-wider">
+              <span className="bg-white px-3 py-1 rounded-full text-xs font-bold text-aid-dark shadow-sm">
                 {totalItems} Types
               </span>
-              <span className="bg-white/80 px-3 py-1 rounded-full text-[10px] font-black text-aid-dark shadow-sm uppercase tracking-wider">
+              <span className="bg-white px-3 py-1 rounded-full text-xs font-bold text-aid-dark shadow-sm">
                 {totalQuantity} Units
               </span>
             </div>
           </div>
 
           <div className="flex justify-between items-end pt-4 border-t border-aid-green/20">
-            <span className="font-heading font-black text-aid-dark/40 uppercase tracking-[0.1em] text-xs pb-1">
+            <span className="font-heading font-bold text-gray-600 text-sm pb-1">
               Total Agreement Value
             </span>
             <div className="text-right">
-              <span className="block text-[10px] font-black text-aid-dark/30 uppercase tracking-[0.2em] mb-1">
+              <span className="block text-xs font-bold text-gray-500 mb-1">
                 Estimated Total Cost
               </span>
-              <span className="text-3xl font-heading font-black text-aid-dark tracking-tighter">
-                <span className="text-sm mr-1">IDR</span>
+              <span className="text-3xl font-heading font-bold text-aid-dark">
+                <span className="text-lg mr-1">IDR</span>
                 {totalAmount.toLocaleString('id-ID')}
               </span>
             </div>

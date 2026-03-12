@@ -6,6 +6,7 @@ import { AgreementForm } from '~/components/agreements/agreement-form';
 import type { AgreementFormData } from '~/components/agreements/schemas';
 import TikTokLayout from '~/components/layout/tiktok-layout';
 import { toast } from 'sonner';
+import Button from '~/components/ui/button';
 
 interface NewAgreementPageProps {
   params: Promise<{
@@ -80,18 +81,22 @@ export default function NewAgreementPage({ params }: NewAgreementPageProps) {
             </p>
 
             <div className="flex gap-4">
-              <button
+              <Button
                 onClick={() => setShowCancelConfirm(false)}
-                className="flex-1 px-6 py-4 border-2 border-aid-dark/10 text-aid-dark font-bold rounded-2xl hover:bg-aid-dark/5 transition-all"
+                variant="outline"
+                size="lg"
+                className="flex-1"
               >
                 Go Back
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleConfirmCancel}
-                className="flex-1 px-6 py-4 bg-red-500 text-white font-bold rounded-2xl hover:bg-red-600 shadow-lg shadow-red-500/20 transition-all hover:scale-[1.02] active:scale-95"
+                variant="danger"
+                size="lg"
+                className="flex-1"
               >
                 Yes, Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>

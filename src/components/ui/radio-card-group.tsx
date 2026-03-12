@@ -1,5 +1,6 @@
 import React from 'react';
 import type { UseFormRegisterReturn } from 'react-hook-form';
+import { CheckCircle2 } from 'lucide-react';
 
 interface RadioCardOption {
   value: string;
@@ -25,13 +26,13 @@ export function RadioCardGroup({
   className = '',
 }: RadioCardGroupProps) {
   const baseCardClasses =
-    'h-full p-6 border-2 rounded-[24px] transition-all duration-300 relative overflow-hidden';
+    'h-full p-5 border-2 rounded-2xl transition-all duration-200 relative overflow-hidden cursor-pointer';
 
   const selectedCardClasses =
-    'border-aid-green bg-aid-green/5 shadow-lg shadow-aid-green/10';
+    'border-aid-green bg-aid-green/10 shadow-md';
 
   const unselectedCardClasses =
-    'border-aid-dark/5 bg-white/40 hover:border-aid-dark/20';
+    'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50';
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -40,7 +41,7 @@ export function RadioCardGroup({
           const isSelected = value === option.value;
 
           return (
-            <label key={option.value} className="flex-1 cursor-pointer group">
+            <label key={option.value} className="flex-1 group">
               <input
                 type="radio"
                 name={name}
@@ -55,29 +56,21 @@ export function RadioCardGroup({
                   isSelected ? selectedCardClasses : unselectedCardClasses
                 }`}
               >
-                {isSelected && (
-                  <div className="absolute top-4 right-4 text-aid-green">
-                    <svg
-                      className="w-6 h-6"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
+                <div className="flex items-start gap-3">
+                  <div className={`mt-0.5 flex-shrink-0 ${isSelected ? 'text-aid-green' : 'text-gray-300'}`}>
+                    <CheckCircle2 className="w-5 h-5" />
                   </div>
-                )}
-                <div className="font-heading font-black text-aid-dark mb-2 tracking-tight">
-                  {option.label}
+                  <div className="flex-1">
+                    <div className="font-heading font-bold text-aid-dark mb-1">
+                      {option.label}
+                    </div>
+                    {option.description && (
+                      <div className="text-sm text-gray-500 leading-relaxed">
+                        {option.description}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {option.description && (
-                  <div className="text-xs text-aid-dark/50 font-medium leading-relaxed">
-                    {option.description}
-                  </div>
-                )}
               </div>
             </label>
           );

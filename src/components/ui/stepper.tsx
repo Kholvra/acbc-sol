@@ -1,4 +1,5 @@
 import React from 'react';
+import { Check } from 'lucide-react';
 
 interface Step {
   number: number;
@@ -14,42 +15,51 @@ interface StepperProps {
 
 export function Stepper({ steps, currentStep, className = '' }: StepperProps) {
   return (
-    <div className={`relative mb-16 max-w-[320px] md:max-w-[440px] mx-auto px-6 ${className}`}>
+    <div className={`relative mb-12 max-w-md mx-auto ${className}`}>
       {/* Background track */}
-      <div className="absolute top-6 left-[calc(24px+1.5rem)] right-[calc(24px+1.5rem)] h-1 bg-aid-dark/10 rounded-full" />
+      <div className="absolute top-5 left-8 right-8 h-0.5 bg-gray-200 rounded-full" />
 
       {/* Progress fill line */}
       <div
-        className="absolute top-6 left-[calc(24px+1.5rem)] h-1 bg-aid-dark transition-all duration-500 ease-out rounded-full origin-left"
+        className="absolute top-5 left-8 h-0.5 bg-aid-green transition-all duration-500 ease-out rounded-full"
         style={{
-          width: `calc(100% - 3rem)`,
-          transform: `scaleX(${(currentStep - 1) / (steps.length - 1)})`,
+          width: `calc(${((currentStep - 1) / (steps.length - 1)) * 100}% - 4rem)`,
+          maxWidth: 'calc(100% - 4rem)',
         }}
       />
 
-      <div className="flex justify-between items-center relative z-10">
-        {steps.map((step) => (
-          <div key={step.id} className="flex flex-col items-center group">
-            <div
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center font-heading font-black text-lg transition-all duration-500 transform
-                ${
-                  currentStep >= step.number
-                    ? 'bg-aid-dark text-white shadow-[0_10px_20px_rgba(0,0,0,0.15)] scale-110'
-                    : 'bg-white text-aid-dark/40 border-2 border-aid-dark/20 backdrop-blur-sm'
-                }`}
-            >
-              {step.number}
+      <div className="flex justify-between items-start relative z-10">
+        {steps.map((step) => {
+          const isCompleted = currentStep > step.number;
+          const isActive = currentStep === step.number;
+          const isPending = currentStep < step.number;
+
+          return (
+            <div key={step.id} className="flex flex-col items-center">
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-heading font-bold text-sm transition-all duration-300
+                  ${isCompleted 
+                    ? 'bg-aid-green text-white' 
+                    : isActive 
+                      ? 'bg-aid-dark text-white ring-4 ring-aid-dark/20' 
+                      : 'bg-white text-gray-400 border-2 border-gray-200'
+                  }`}
+              >
+                {isCompleted ? (
+                  <Check className="w-5 h-5" />
+                ) : (
+                  step.number
+                )}
+              </div>
+              <span
+                className={`mt-2 text-xs font-heading font-bold transition-colors duration-300
+                  ${isCompleted || isActive ? 'text-aid-dark' : 'text-gray-400'}`}
+              >
+                {step.label}
+              </span>
             </div>
-            <span
-              className={`mt-3 text-[10px] md:text-xs font-heading font-black uppercase tracking-widest transition-colors duration-500 whitespace-nowrap
-                ${
-                  currentStep >= step.number ? 'text-aid-dark' : 'text-aid-dark/30'
-                }`}
-            >
-              {step.label}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

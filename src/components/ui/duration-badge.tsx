@@ -1,4 +1,5 @@
 import React from 'react';
+import { Clock } from 'lucide-react';
 
 interface DurationBadgeProps {
   days: number;
@@ -10,9 +11,10 @@ export function DurationBadge({ days, label = 'Duration', className = '' }: Dura
   if (days <= 0) return null;
 
   return (
-    <div className={`flex items-center gap-2 text-sm font-heading font-black text-aid-dark/40 uppercase tracking-widest bg-aid-dark/[0.03] w-fit px-4 py-2 rounded-xl ${className}`}>
+    <div className={`inline-flex items-center gap-2 text-sm font-heading font-bold text-gray-600 bg-gray-100 px-4 py-2 rounded-full ${className}`}>
+      <Clock className="w-4 h-4 text-aid-green" />
       {label}:{' '}
-      <span className="text-aid-green">{days} days</span>
+      <span className="text-aid-dark">{days} days</span>
     </div>
   );
 }

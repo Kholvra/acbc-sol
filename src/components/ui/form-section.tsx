@@ -20,7 +20,7 @@ export function FormSection({
   className = '',
 }: FormSectionProps) {
   return (
-    <div className={`rounded-[32px] p-8 bg-white/60 backdrop-blur-xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ${className}`}>
+    <div className={`rounded-3xl p-8 bg-white border border-gray-200 shadow-sm ${className}`}>
       <h3 className="text-xl font-heading font-black text-aid-dark mb-8 flex items-center gap-3">
         <span className={`w-2 h-6 rounded-full ${accentColorMap[accentColor]}`} />
         {title}

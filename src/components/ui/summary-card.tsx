@@ -14,17 +14,17 @@ export function SummaryCard({
   className = '',
 }: SummaryCardProps) {
   const variantClasses = {
-    default: 'bg-white/40 p-5 rounded-2xl border border-white/60 shadow-sm',
+    default: 'bg-white p-5 rounded-xl border border-gray-200 shadow-sm',
     highlight:
-      'bg-aid-green/10 border-2 border-aid-green/20 rounded-[24px] p-6 shadow-lg shadow-aid-green/5',
+      'bg-aid-green/10 border border-aid-green/30 rounded-xl p-5',
   };
 
   return (
     <div className={`${variantClasses[variant]} ${className}`}>
-      <p className="text-[10px] font-heading font-black text-aid-dark/30 mb-2 uppercase tracking-[0.2em]">
+      <p className="text-xs font-heading font-bold text-gray-500 mb-2">
         {label}
       </p>
-      <div className="font-heading font-black text-aid-dark">{value}</div>
+      <div className="font-heading font-bold text-aid-dark">{value}</div>
     </div>
   );
 }
