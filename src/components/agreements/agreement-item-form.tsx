@@ -4,6 +4,7 @@ import { useWatch } from 'react-hook-form';
 import type { Control, FieldError } from 'react-hook-form';
 import { X } from 'lucide-react';
 import type { AgreementFormData } from './schemas';
+import { parseIndonesianNumber } from './schemas';
 import { FormInput } from '~/components/ui/form-input';
 import { FormCurrencyInput } from '~/components/ui/form-currency-input';
 import Button from '~/components/ui/button';
@@ -26,10 +27,8 @@ export function AgreementItemForm({ control, index, onRemove, errors }: Agreemen
     name: `items.${index}`,
   });
 
-  // Parse unitPrice in case it's a formatted string (e.g., "1.000.000")
-  const unitPrice = typeof item?.unitPrice === 'string'
-    ? parseFloat(item.unitPrice.replace(/\./g, '')) || 0
-    : (item?.unitPrice ?? 0);
+  // Use shared helper to parse unitPrice (handles formatted strings like "1.000.000")
+  const unitPrice = parseIndonesianNumber(item?.unitPrice) ?? 0;
 
   const subtotal = unitPrice * (item?.quantity ?? 1);
 
