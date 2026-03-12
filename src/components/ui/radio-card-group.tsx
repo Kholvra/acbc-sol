@@ -15,6 +15,7 @@ interface RadioCardGroupProps {
   onChange: (value: string) => void;
   register?: UseFormRegisterReturn;
   className?: string;
+  error?: string;
 }
 
 export function RadioCardGroup({
@@ -24,6 +25,7 @@ export function RadioCardGroup({
   onChange,
   register,
   className = '',
+  error,
 }: RadioCardGroupProps) {
   const baseCardClasses =
     'h-full p-5 border-2 rounded-2xl transition-all duration-200 relative overflow-hidden cursor-pointer';
@@ -33,6 +35,8 @@ export function RadioCardGroup({
 
   const unselectedCardClasses =
     'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50';
+
+  const errorCardClasses = 'border-red-400 bg-red-50';
 
   return (
     <div className={`space-y-4 ${className}`}>
@@ -54,7 +58,7 @@ export function RadioCardGroup({
               <div
                 className={`${baseCardClasses} ${
                   isSelected ? selectedCardClasses : unselectedCardClasses
-                }`}
+                } ${error ? errorCardClasses : ''}`}
               >
                 <div className="flex items-start gap-3">
                   <div className={`mt-0.5 flex-shrink-0 ${isSelected ? 'text-aid-green' : 'text-gray-300'}`}>
@@ -76,6 +80,9 @@ export function RadioCardGroup({
           );
         })}
       </div>
+      {error && (
+        <p className="text-sm text-red-500 font-medium mt-2">{error}</p>
+      )}
     </div>
   );
 }

@@ -32,14 +32,14 @@ export function ContractPeriodSection({ form }: ContractPeriodSectionProps) {
           type="date"
           min={new Date().toISOString().split('T')[0]}
           error={form.formState.errors.startDate?.message}
-          register={form.register('startDate', { valueAsDate: true })}
+          register={form.register('startDate')}
         />
         <FormInput
           label="End Date *"
           type="date"
           min={tomorrow.toISOString().split('T')[0]}
           error={form.formState.errors.endDate?.message}
-          register={form.register('endDate', { valueAsDate: true })}
+          register={form.register('endDate')}
         />
       </div>
       {daysDiff > 0 && (

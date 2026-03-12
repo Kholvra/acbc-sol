@@ -1,7 +1,7 @@
 'use client';
 
 import { useWatch } from 'react-hook-form';
-import type { Control } from 'react-hook-form';
+import type { Control, FieldError } from 'react-hook-form';
 import { X } from 'lucide-react';
 import type { AgreementFormData } from './schemas';
 import { FormInput } from '~/components/ui/form-input';
@@ -11,9 +11,15 @@ interface AgreementItemFormProps {
   control: Control<AgreementFormData>;
   index: number;
   onRemove: () => void;
+  errors?: {
+    itemName?: FieldError;
+    specifications?: FieldError;
+    unitPrice?: FieldError;
+    quantity?: FieldError;
+  };
 }
 
-export function AgreementItemForm({ control, index, onRemove }: AgreementItemFormProps) {
+export function AgreementItemForm({ control, index, onRemove, errors }: AgreementItemFormProps) {
   const item = useWatch({
     control,
     name: `items.${index}`,
@@ -51,6 +57,7 @@ export function AgreementItemForm({ control, index, onRemove }: AgreementItemFor
           type="text"
           placeholder="e.g., Paracetamol 500mg"
           register={control.register(`items.${index}.itemName`)}
+          error={errors?.itemName?.message}
         />
 
         <FormInput
@@ -58,6 +65,7 @@ export function AgreementItemForm({ control, index, onRemove }: AgreementItemFor
           type="textarea"
           placeholder="e.g., Box isi 100 tablet"
           register={control.register(`items.${index}.specifications`)}
+          error={errors?.specifications?.message}
         />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -66,12 +74,14 @@ export function AgreementItemForm({ control, index, onRemove }: AgreementItemFor
             type="number"
             prefix="Rp"
             register={control.register(`items.${index}.unitPrice`, { valueAsNumber: true })}
+            error={errors?.unitPrice?.message}
           />
 
           <FormInput
             label="Quantity *"
             type="number"
             register={control.register(`items.${index}.quantity`, { valueAsNumber: true })}
+            error={errors?.quantity?.message}
           />
 
           <div>

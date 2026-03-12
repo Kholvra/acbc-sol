@@ -19,14 +19,14 @@ interface AgreementFormProps {
   onCancel?: () => void;
 }
 
-const defaultFormValues: AgreementFormData = {
+const defaultFormValues = {
   campaignId: '',
   vendorName: '',
-  category: 'MEDICAL',
+  category: 'MEDICAL' as const,
   items: [{ itemName: '', specifications: '', unitPrice: 0, quantity: 1 }],
-  startDate: new Date(),
-  endDate: getDefaultEndDate(),
-  paymentTerms: 'FULL_PAYMENT',
+  startDate: new Date().toISOString().split('T')[0],
+  endDate: getDefaultEndDate().toISOString().split('T')[0],
+  paymentTerms: 'FULL_PAYMENT' as const,
 };
 
 const steps = [
@@ -41,14 +41,16 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
 
   const form: UseFormReturn<AgreementFormData> = useForm<AgreementFormData>({
     resolver: zodResolver(agreementFormSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
     defaultValues: {
       ...defaultFormValues,
       campaignId,
       vendorName: initialData?.vendorName ?? '',
       category: initialData?.category ?? 'MEDICAL',
       items: initialData?.items ?? defaultFormValues.items,
-      startDate: initialData?.startDate ?? new Date(),
-      endDate: initialData?.endDate ?? getDefaultEndDate(undefined, DEFAULT_CONTRACT_DAYS),
+      startDate: initialData?.startDate ?? new Date().toISOString().split('T')[0],
+      endDate: initialData?.endDate ?? getDefaultEndDate().toISOString().split('T')[0],
       paymentTerms: initialData?.paymentTerms ?? 'FULL_PAYMENT',
     },
   });
@@ -117,7 +119,7 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
                 errors={form.formState.errors}
               />
 
-              <ItemsSection form={form} />
+              <ItemsSection form={form} errors={form.formState.errors} />
 
               <ContractPeriodSection form={form} />
 

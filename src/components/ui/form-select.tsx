@@ -47,7 +47,9 @@ export function FormSelect({
           {...(register ?? {})}
           {...(onChange ? { onChange } : {})}
         >
-          <option value="">{placeholder}</option>
+          <option value="" disabled>
+            {placeholder}
+          </option>
           {options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}

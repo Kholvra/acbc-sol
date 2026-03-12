@@ -1,6 +1,6 @@
 'use client';
 
-import type { UseFormReturn } from 'react-hook-form';
+import type { UseFormReturn, FieldErrorsImpl, DeepRequired } from 'react-hook-form';
 import { useFieldArray } from 'react-hook-form';
 import { Plus } from 'lucide-react';
 import type { AgreementFormData } from './schemas';
@@ -11,9 +11,10 @@ import Button from '~/components/ui/button';
 
 interface ItemsSectionProps {
   form: UseFormReturn<AgreementFormData>;
+  errors?: FieldErrorsImpl<DeepRequired<AgreementFormData>>;
 }
 
-export function ItemsSection({ form }: ItemsSectionProps) {
+export function ItemsSection({ form, errors }: ItemsSectionProps) {
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'items',
@@ -28,11 +29,24 @@ export function ItemsSection({ form }: ItemsSectionProps) {
     });
   };
 
+  const itemErrors = errors?.items;
+
+  const arrayError = typeof itemErrors === 'object' && itemErrors !== null && 'message' in itemErrors
+    ? (itemErrors as { message?: string }).message
+    : undefined;
+
   return (
     <FormSection
       title="Items Details"
       className="relative"
     >
+      {/* Array-level error */}
+      {arrayError && (
+        <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-2xl">
+          <p className="text-sm text-red-600 font-medium">{arrayError}</p>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-2">
           <span className="text-sm font-heading font-black text-aid-dark uppercase tracking-wider">
@@ -57,6 +71,7 @@ export function ItemsSection({ form }: ItemsSectionProps) {
             control={form.control}
             index={index}
             onRemove={() => remove(index)}
+            errors={itemErrors?.[index]}
           />
         ))}
       </div>

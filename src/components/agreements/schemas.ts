@@ -11,7 +11,9 @@ export const expenseCategorySchema = z.enum([
   'TRANSPORTATION',
   'UTILITIES',
   'OTHER',
-]);
+], {
+  errorMap: () => ({ message: 'Category is required' }),
+});
 
 export const paymentTermsSchema = z.enum(['FULL_PAYMENT', 'INSTALLMENT']);
 
@@ -28,20 +30,14 @@ const _agreementFormBaseSchema = z.object({
   vendorName: z.string().min(1, 'Vendor name is required'),
   category: expenseCategorySchema,
   items: z.array(agreementItemSchema).min(1, 'At least 1 item required'),
-  startDate: z.date({
-    required_error: 'Start date is required',
-    invalid_type_error: 'Invalid start date',
-  }),
-  endDate: z.date({
-    required_error: 'End date is required',
-    invalid_type_error: 'Invalid end date',
-  }),
+  startDate: z.string({ required_error: 'Start date is required', invalid_type_error: 'Invalid start date' }),
+  endDate: z.string({ required_error: 'End date is required', invalid_type_error: 'Invalid end date' }),
   paymentTerms: paymentTermsSchema,
-});
+}).strict();
 
 // Schema with refinements (for form validation)
 export const agreementFormSchema = _agreementFormBaseSchema.refine(
-  (data) => data.endDate > data.startDate,
+  (data) => new Date(data.endDate) > new Date(data.startDate),
   {
     message: 'End date must be after start date',
     path: ['endDate'],

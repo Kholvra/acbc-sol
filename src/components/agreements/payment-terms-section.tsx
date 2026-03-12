@@ -33,6 +33,7 @@ export function PaymentTermsSection({ form }: PaymentTermsSectionProps) {
         value={selectedTerms}
         onChange={(value) => form.setValue('paymentTerms', value as 'FULL_PAYMENT' | 'INSTALLMENT')}
         register={form.register('paymentTerms')}
+        error={form.formState.errors.paymentTerms?.message}
       />
     </FormSection>
   );
