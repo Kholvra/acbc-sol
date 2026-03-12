@@ -1,6 +1,7 @@
 'use client';
 
 import type { AgreementFormData } from './schemas';
+import { parseIndonesianNumber } from './schemas';
 import { FormSection } from '~/components/ui/form-section';
 import { SummaryCard } from '~/components/ui/summary-card';
 
@@ -8,18 +9,9 @@ interface FormSummaryProps {
   formData: AgreementFormData;
 }
 
-// Helper to parse unitPrice that might be a formatted string
-const parseUnitPrice = (val: unknown): number => {
-  if (typeof val === 'number') return val;
-  if (typeof val === 'string') {
-    return parseFloat(val.replace(/\./g, '')) || 0;
-  }
-  return 0;
-};
-
 export function FormSummary({ formData }: FormSummaryProps) {
   const totalAmount = formData.items.reduce(
-    (sum, item) => sum + (parseUnitPrice(item.unitPrice) * item.quantity),
+    (sum, item) => sum + ((parseIndonesianNumber(item.unitPrice) ?? 0) * item.quantity),
     0
   );
 
@@ -60,7 +52,7 @@ export function FormSummary({ formData }: FormSummaryProps) {
           </p>
           <ul className="space-y-3">
             {formData.items.map((item, i) => {
-              const unitPrice = parseUnitPrice(item.unitPrice);
+              const unitPrice = parseIndonesianNumber(item.unitPrice) ?? 0;
               return (
                 <li
                   key={i}
