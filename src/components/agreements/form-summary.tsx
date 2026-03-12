@@ -1,7 +1,7 @@
 'use client';
 
 import type { AgreementFormData } from './schemas';
-import { parseIndonesianNumber } from './schemas';
+import { parseUnitPrice } from './schemas';
 import { FormSection } from '~/components/ui/form-section';
 import { SummaryCard } from '~/components/ui/summary-card';
 
@@ -11,7 +11,7 @@ interface FormSummaryProps {
 
 export function FormSummary({ formData }: FormSummaryProps) {
   const totalAmount = formData.items.reduce(
-    (sum, item) => sum + ((parseIndonesianNumber(item.unitPrice) ?? 0) * item.quantity),
+    (sum, item) => sum + (parseUnitPrice(item.unitPrice) * item.quantity),
     0
   );
 
@@ -52,7 +52,7 @@ export function FormSummary({ formData }: FormSummaryProps) {
           </p>
           <ul className="space-y-3">
             {formData.items.map((item, i) => {
-              const unitPrice = parseIndonesianNumber(item.unitPrice) ?? 0;
+              const unitPrice = parseUnitPrice(item.unitPrice);
               return (
                 <li
                   key={i}

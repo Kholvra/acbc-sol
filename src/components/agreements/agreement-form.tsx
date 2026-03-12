@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useForm, type UseFormReturn, type FieldErrors } from 'react-hook-form';
+import { useState } from 'react';
+import { useForm, type FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { agreementFormSchema, type AgreementFormData, getDefaultEndDate, DEFAULT_CONTRACT_DAYS } from './schemas';
+import { agreementFormSchema, type AgreementFormData, getDefaultEndDate } from './schemas';
 import { BasicInfoSection } from './basic-info-section';
 import { ItemsSection } from './items-section';
 import { ContractPeriodSection } from './contract-period-section';
@@ -88,9 +88,8 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const form = useForm<AgreementFormData>({
-    resolver: zodResolver(agreementFormSchema) as any,
+    resolver: zodResolver(agreementFormSchema),
     mode: 'onChange',
     reValidateMode: 'onChange',
     defaultValues: {
