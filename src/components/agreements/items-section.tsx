@@ -5,6 +5,8 @@ import { useFieldArray } from 'react-hook-form';
 import { Plus } from 'lucide-react';
 import type { AgreementFormData } from './schemas';
 import { AgreementItemForm } from './agreement-item-form';
+import { FormSection } from '~/components/ui/form-section';
+import { EmptyState } from '~/components/ui/empty-state';
 
 interface ItemsSectionProps {
   form: UseFormReturn<AgreementFormData>;
@@ -26,12 +28,16 @@ export function ItemsSection({ form }: ItemsSectionProps) {
   };
 
   return (
-    <div className="rounded-[32px] p-8 bg-white/60 backdrop-blur-xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+    <FormSection
+      title="Items Details"
+      className="relative"
+    >
       <div className="flex items-center justify-between mb-8">
-        <h3 className="text-xl font-heading font-black text-aid-dark flex items-center gap-3">
-          <span className="w-2 h-6 bg-aid-green rounded-full shadow-[0_0_10px_rgba(187,200,99,0.3)]" />
-          Items Details
-        </h3>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-heading font-black text-aid-dark uppercase tracking-wider">
+            Add all items for this purchase agreement
+          </span>
+        </div>
         <button
           type="button"
           onClick={addItem}
@@ -53,10 +59,17 @@ export function ItemsSection({ form }: ItemsSectionProps) {
       </div>
 
       {fields.length === 0 && (
-        <div className="text-center py-12 text-aid-dark/30 border-2 border-dashed border-aid-dark/5 rounded-[24px] bg-aid-dark/[0.02]">
-          <p className="font-heading font-bold">No items added yet. Click &quot;Add Item&quot; to start.</p>
-        </div>
+        <EmptyState
+          title="No items added yet"
+          description="Click 'Add Item' to start adding items to your agreement"
+          action={{
+            label: 'Add Item',
+            onClick: addItem,
+          }}
+        />
       )}
-    </div>
+    </FormSection>
   );
 }
+
+export default ItemsSection;

@@ -9,6 +9,7 @@ import { ItemsSection } from './items-section';
 import { ContractPeriodSection } from './contract-period-section';
 import { PaymentTermsSection } from './payment-terms-section';
 import { FormSummary } from './form-summary';
+import { Stepper } from '~/components/ui/stepper';
 import Button from '~/components/ui/button';
 
 interface AgreementFormProps {
@@ -27,6 +28,12 @@ const defaultFormValues: AgreementFormData = {
   endDate: getDefaultEndDate(),
   paymentTerms: 'FULL_PAYMENT',
 };
+
+const steps = [
+  { number: 1, label: 'Details', id: 'details' },
+  { number: 2, label: 'Review', id: 'review' },
+  { number: 3, label: 'Submit', id: 'submit' },
+];
 
 export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: AgreementFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -64,12 +71,6 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
     }
   };
 
-  const steps = [
-    { number: 1, label: 'Details', id: 'details' },
-    { number: 2, label: 'Review', id: 'review' },
-    { number: 3, label: 'Submit', id: 'submit' },
-  ];
-
   const handleNextStep = async (targetStep: number) => {
     // Validate current section before moving to next step
     if (targetStep === 2) {
@@ -80,8 +81,6 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
     setCurrentStep(targetStep);
   };
 
-  // Get first error message for summary display
-  const firstError = form.formState.errors;
   const hasErrors = Object.keys(form.formState.errors).length > 0;
 
   return (
@@ -104,58 +103,25 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
           </div>
         </div>
       )}
-      {/* Progress Steps */}
-      <div className="relative mb-16 max-w-[320px] md:max-w-[440px] mx-auto px-6">
-        {/* Background track - dari tengah step 1 ke tengah step 3 */}
-        <div className="absolute top-6 left-[calc(24px+1.5rem)] right-[calc(24px+1.5rem)] h-1 bg-aid-dark/10 rounded-full" />
-        
-        {/* Progress fill line */}
-        <div
-          className="absolute top-6 left-[calc(24px+1.5rem)] h-1 bg-aid-dark transition-all duration-500 ease-out rounded-full origin-left"
-          style={{
-            width: `calc(100% - 3rem)`,
-            transform: `scaleX(${(currentStep - 1) / (steps.length - 1)})`,
-          }}
-        />
 
-        <div className="flex justify-between items-center relative z-10">
-          {steps.map((step) => (
-            <div key={step.id} className="flex flex-col items-center group">
-              <div
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center font-heading font-black text-lg transition-all duration-500 transform
-                  ${currentStep >= step.number
-                    ? 'bg-aid-dark text-white shadow-[0_10px_20px_rgba(0,0,0,0.15)] scale-110'
-                    : 'bg-white text-aid-dark/40 border-2 border-aid-dark/20 backdrop-blur-sm'
-                  }`}
-              >
-                {step.number}
-              </div>
-              <span
-                className={`mt-3 text-[10px] md:text-xs font-heading font-black uppercase tracking-widest transition-colors duration-500 whitespace-nowrap
-                  ${currentStep >= step.number ? 'text-aid-dark' : 'text-aid-dark/30'}`}
-              >
-                {step.label}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Progress Steps */}
+      <Stepper steps={steps} currentStep={currentStep} />
 
       <form onSubmit={form.handleSubmit(handleFinalSubmit)} className="space-y-8">
         {/* Step 1: All Input Sections */}
         {currentStep === 1 && (
           <>
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <BasicInfoSection
-                  control={form.control}
-                  errors={form.formState.errors}
-                />
+              <BasicInfoSection
+                control={form.control}
+                errors={form.formState.errors}
+              />
 
-                <ItemsSection form={form} />
+              <ItemsSection form={form} />
 
-                <ContractPeriodSection form={form} />
+              <ContractPeriodSection form={form} />
 
-                <PaymentTermsSection form={form} />
+              <PaymentTermsSection form={form} />
             </div>
 
             <div className="flex gap-4 pt-6">
@@ -209,7 +175,7 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
             <div className="mt-8 bg-aid-green/10 border-2 border-aid-green/20 rounded-3xl p-8 text-center backdrop-blur-sm">
               <div className="w-16 h-16 bg-aid-green rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-aid-green/20">
                 <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
               <p className="text-aid-dark font-heading font-black text-xl mb-2">Ready to Submit</p>
@@ -240,3 +206,5 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
     </div>
   );
 }
+
+export default AgreementForm;
