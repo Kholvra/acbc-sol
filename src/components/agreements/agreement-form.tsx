@@ -70,29 +70,29 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
     { number: 3, label: 'Submit', id: 'submit' },
   ];
 
-  const canProceedToReview = () => {
-    const values = form.getValues();
-    return (
-      values.vendorName.trim() !== '' &&
-      values.items.length > 0 &&
-      values.items.every((item) =>
-        item.itemName.trim() !== '' && item.quantity >= 1 && item.unitPrice >= 0
-      )
-    );
+  const handleNextStep = async (targetStep: number) => {
+    // Validate current section before moving to next step
+    if (targetStep === 2) {
+      // Validate step 1 fields: vendorName, category, items, startDate, endDate, paymentTerms
+      const isValid = await form.trigger(['vendorName', 'category', 'items', 'startDate', 'endDate', 'paymentTerms']);
+      if (!isValid) return;
+    }
+    setCurrentStep(targetStep);
   };
 
   return (
     <div>
       {/* Progress Steps */}
       <div className="relative mb-16 max-w-[320px] md:max-w-[440px] mx-auto px-6">
-        {/* Background track */}
-        <div className="absolute top-6 left-6 right-6 h-1 bg-aid-dark/10 rounded-full" />
+        {/* Background track - dari tengah step 1 ke tengah step 3 */}
+        <div className="absolute top-6 left-[calc(24px+1.5rem)] right-[calc(24px+1.5rem)] h-1 bg-aid-dark/10 rounded-full" />
         
         {/* Progress fill line */}
         <div
-          className="absolute top-6 left-6 h-1 bg-aid-dark transition-all duration-500 ease-out rounded-full"
+          className="absolute top-6 left-[calc(24px+1.5rem)] h-1 bg-aid-dark transition-all duration-500 ease-out rounded-full origin-left"
           style={{
-            width: `calc(((100% - 48px) / ${steps.length - 1}) * ${currentStep - 1})`,
+            width: `calc(100% - 3rem)`,
+            transform: `scaleX(${(currentStep - 1) / (steps.length - 1)})`,
           }}
         />
 
@@ -147,9 +147,8 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
               </Button>
               <Button
                 type="button"
-                onClick={() => setCurrentStep(2)}
-                disabled={!canProceedToReview()}
-                className="flex-[2] bg-aid-dark text-white font-black rounded-2xl py-4 shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                onClick={() => handleNextStep(2)}
+                className="flex-[2] bg-aid-dark text-white font-black rounded-2xl py-4 shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
               >
                 Continue to Review →
               </Button>
@@ -172,7 +171,7 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
               </Button>
               <Button
                 type="button"
-                onClick={() => setCurrentStep(3)}
+                onClick={() => handleNextStep(3)}
                 className="flex-[2] bg-aid-dark text-white font-black rounded-2xl py-4 shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
               >
                 Confirm & Submit →

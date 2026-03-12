@@ -17,20 +17,48 @@ export const paymentTermsSchema = z.enum(['FULL_PAYMENT', 'INSTALLMENT']);
 
 export const agreementItemSchema = z.object({
   itemName: z.string().min(1, 'Item name is required'),
-  specifications: z.string().optional().or(z.literal('')),
+  specifications: z.string().optional(),
   unitPrice: z.number().min(0, 'Price must be positive'),
   quantity: z.number().int().min(1, 'Quantity must be at least 1'),
 });
 
-export const agreementFormSchema = z.object({
-  campaignId: z.string(),
+// Base schema without refinements (for extend usage)
+const _agreementFormBaseSchema = z.object({
+  campaignId: z.string().min(1, 'Campaign ID is required'),
   vendorName: z.string().min(1, 'Vendor name is required'),
   category: expenseCategorySchema,
   items: z.array(agreementItemSchema).min(1, 'At least 1 item required'),
-  startDate: z.date(),
-  endDate: z.date(),
+  startDate: z.date({
+    required_error: 'Start date is required',
+    invalid_type_error: 'Invalid start date',
+  }),
+  endDate: z.date({
+    required_error: 'End date is required',
+    invalid_type_error: 'Invalid end date',
+  }),
   paymentTerms: paymentTermsSchema,
 });
+
+// Schema with refinements (for form validation)
+export const agreementFormSchema = _agreementFormBaseSchema.refine(
+  (data) => data.endDate > data.startDate,
+  {
+    message: 'End date must be after start date',
+    path: ['endDate'],
+  }
+).refine(
+  (data) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(data.startDate);
+    start.setHours(0, 0, 0, 0);
+    return start >= today;
+  },
+  {
+    message: 'Start date cannot be in the past',
+    path: ['startDate'],
+  }
+);
 
 // Helper to get default end date
 export const getDefaultEndDate = (startDate: Date = new Date(), days: number = DEFAULT_CONTRACT_DAYS): Date => {
@@ -38,7 +66,7 @@ export const getDefaultEndDate = (startDate: Date = new Date(), days: number = D
 };
 
 // Schema for agreements with metadata (for list page, backend response)
-export const agreementWithMetaSchema = agreementFormSchema.extend({
+export const agreementWithMetaSchema = _agreementFormBaseSchema.extend({
   id: z.string(),
   status: z.enum(['PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'COMPLETED']),
   totalAmount: z.number(),
