@@ -9,9 +9,11 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { FACTORY_ADDRESS, FACTORY_ABI } from '~/constants/contracts';
 import Button from '../ui/button';
-import { uploadJSONToIPFS, uploadFileToIPFS } from '~/utils/pinata';
+import { uploadJSONToIPFS } from '~/utils/pinata';
+import { uploadVideoFile } from '~/lib/video';
 import { createMeeting, generateVideoSDKToken } from '~/utils/videosdk';
 import { PROVINCES } from '~/constants/provinces';
+import { api } from '~/trpc/react';
 
 interface CampaignCreationModalProps {
   isOpen: boolean;
@@ -35,6 +37,17 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
 
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  // save campaign to database via tRPC
+  const createCampaignMutation = api.campaign.createCampaign.useMutation({
+    onSuccess: async (data) => {
+      console.log('Campaign saved to database:', data);
+    },
+    onError: (error) => {
+      console.error('Failed to save campaign to database:', error);
+      toast.error('Failed to save campaign to database');
+    },
+  });
+
   const { data: hash, writeContract, isPending: isWalletConfirming, error: writeError } = useWriteContract();
   
   const { isLoading: isTransactionConfirming, isSuccess: isTransactionSuccess, error: receiptError } = useWaitForTransactionReceipt({
@@ -51,6 +64,14 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
         toast.error("Please fill all fields");
         return;
     }
+    if (formData.description.length < 20) {
+        toast.error("Description must contain at least 20 characters");
+        return;
+    }
+    if (!formData.endDate) {
+        toast.error("Please select an end date");
+        return;
+    }
     if (campaignType === 'video' && !videoFile) {
         toast.error("Please upload a video pitch");
         return;
@@ -61,10 +82,11 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
 
         if (campaignType === 'video' && videoFile) {
              setUploadStep('uploading_video');
-             const hash = await uploadFileToIPFS(videoFile);
-             setUploadProgress(1);
-             if (!hash) throw new Error("Video upload failed");
-             contentHash = `ipfs://${hash}`;
+             const result = await uploadVideoFile(videoFile, {
+               onProgress: (progress) => setUploadProgress(progress),
+             });
+             if (!result.ipfsHash) throw new Error("Video upload failed");
+             contentHash = `ipfs://${result.ipfsHash}`;
         } else {
              setUploadStep('uploading_video');
              const token = await generateVideoSDKToken();
@@ -95,8 +117,50 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
 
         if (!ipfsHash) throw new Error("Metadata upload failed");
 
+        // step 1: save to database via tRPC first
         setUploadStep('blockchain');
+        toast.info('Saving campaign to database...');
 
+        // generate dummy items from description (minimal 1 item required by schema)
+        const campaignItems = formData.description.split('. ')
+          .filter(s => s.trim().length > 0)
+          .slice(0, 5)
+          .map((desc) => ({
+            itemName: desc.slice(0, 50) || 'Campaign item',
+            quantity: 1,
+            estimatedPrice: Math.max(1, Math.floor(Number(formData.targetAmount) / 5)),
+          }));
+
+        if (campaignItems.length === 0) {
+          campaignItems.push({
+            itemName: formData.title.slice(0, 50),
+            quantity: 1,
+            estimatedPrice: Number(formData.targetAmount),
+          });
+        }
+
+        try {
+          await createCampaignMutation.mutateAsync({
+            title: formData.title,
+            pitchVideoUrl: campaignType === 'video' ? contentHash : undefined,
+            category: formData.category,
+            province: formData.province,
+            targetAmount: Number(formData.targetAmount),
+            endDate: new Date(formData.endDate).toISOString(),
+            description: formData.description,
+            items: campaignItems,
+          });
+          toast.success('Campaign saved to database!');
+        } catch (trpcError) {
+          console.error('tRPC error:', trpcError);
+          toast.error('Failed to save to database', {
+            description: trpcError instanceof Error ? trpcError.message : 'Unknown error',
+          });
+          setUploadStep('idle');
+          return;
+        }
+
+        // step 2: call blockchain
         writeContract({
             address: FACTORY_ADDRESS,
             abi: FACTORY_ABI,
@@ -167,14 +231,15 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
 
   useEffect(() => {
     if (uploadStep === 'uploading_video') {
-        setUploadProgress(0);
+        // progress now handled by uploadVideoFile's onProgress callback
+        // this interval only runs as fallback if progress stalls
         const interval = setInterval(() => {
             setUploadProgress(prev => {
-                if (prev >= 0.9) return prev;
-                const increment = Math.random() * 0.1;
-                return Math.min(prev + increment, 0.9);
+                if (prev >= 0.95) return prev; // don't auto-increment past 95%
+                const increment = Math.random() * 0.05;
+                return Math.min(prev + increment, 0.95);
             });
-        }, 500);
+        }, 1000);
         return () => clearInterval(interval);
     }
   }, [uploadStep]);
