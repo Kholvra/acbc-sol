@@ -252,52 +252,60 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
           />
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl z-10 p-6 max-h-[90vh] overflow-y-auto"
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl z-10 max-h-[90vh] overflow-hidden flex flex-col"
           >
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-heading font-bold text-aid-dark">Start a Campaign</h2>
-              <button onClick={onClose} className="p-2 hover:bg-aid-offwhite rounded-full transition-colors">
-                <X size={20} />
-              </button>
+            {/* Header */}
+            <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-gray-100">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-2xl font-heading font-bold text-aid-dark">Start a Campaign</h2>
+                  <p className="text-sm text-gray-500 mt-1">Create a fundraising campaign for your cause</p>
+                </div>
+                <button 
+                  onClick={onClose} 
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400 hover:text-gray-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
-            {isTransactionSuccess ? (
-                 <div className="text-center py-8">
-                    <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <CheckCircle2 size={32} />
-                    </div>
-                    <h3 className="text-xl font-bold text-aid-dark mb-2">Campaign Created!</h3>
-                    <p className="text-gray-600">Your campaign has been successfully deployed to the blockchain.</p>
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              {isTransactionSuccess ? (
+                 <div className="text-center py-12">
+                    <motion.div 
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", damping: 15, stiffness: 200 }}
+                      className="w-20 h-20 bg-gradient-to-br from-green-100 to-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm"
+                    >
+                        <CheckCircle2 size={40} />
+                    </motion.div>
+                    <h3 className="text-2xl font-heading font-bold text-aid-dark mb-3">Campaign Created!</h3>
+                    <p className="text-gray-600 max-w-sm mx-auto">Your campaign is now live on the blockchain and visible to supporters.</p>
                 </div>
-            ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                    <label className="block text-sm font-bold text-aid-dark mb-1">Campaign Title</label>
-                    <input
-                    type="text"
-                    required
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-aid-green focus:ring-1 focus:ring-aid-green transition-all"
-                    placeholder="e.g., Flood Relief for Village X"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-bold text-aid-dark mb-2">Campaign Type</label>
-                    <div className="flex bg-gray-100 p-1 rounded-xl mb-4">
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  {/* Campaign Type Selector */}
+                  <div>
+                    <label className="block text-sm font-semibold text-aid-dark mb-2">Campaign Type</label>
+                    <div className="flex bg-gray-100 p-1.5 rounded-xl">
                         <button
                             type="button"
                             onClick={() => setCampaignType('video')}
-                            className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                                campaignType === 'video' ? 'bg-white text-aid-dark shadow-sm' : 'text-gray-500 hover:text-aid-dark'
+                            className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                                campaignType === 'video' 
+                                  ? 'bg-white text-aid-dark shadow-sm ring-1 ring-gray-200' 
+                                  : 'text-gray-500 hover:text-aid-dark'
                             }`}
                         >
                             <VideoIcon size={16} /> Pre-recorded Video
@@ -305,169 +313,201 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
                         <button
                             type="button"
                             onClick={() => setCampaignType('live')}
-                            className={`flex-1 py-2 px-4 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 ${
-                                campaignType === 'live' ? 'bg-white text-red-500 shadow-sm' : 'text-gray-500 hover:text-aid-dark'
+                            className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2 ${
+                                campaignType === 'live' 
+                                  ? 'bg-white text-red-600 shadow-sm ring-1 ring-gray-200' 
+                                  : 'text-gray-500 hover:text-aid-dark'
                             }`}
                         >
                             <div className={`w-2 h-2 rounded-full ${campaignType === 'live' ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`} />
                             Go Live
                         </button>
                     </div>
+                  </div>
 
-                    {campaignType === 'video' ? (
-                        <>
-                            <label className="block text-sm font-bold text-aid-dark mb-1">Video Pitch (Max 60s)</label>
-                            <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-aid-green transition-colors cursor-pointer relative bg-gray-50 group">
-                                <input 
-                                    type="file" 
-                                    accept="video/*" 
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            if (file.size > 50 * 1024 * 1024) return toast.error("File too large (Max 50MB)");
-                                            setVideoFile(file);
-                                        }
-                                    }}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                />
-                                {videoFile ? (
-                                    <div className="flex items-center justify-center gap-2 text-aid-green font-bold">
-                                        <VideoIcon size={24} />
-                                        <span className="truncate max-w-[200px]">{videoFile.name}</span>
-                                        <button onClick={(e) => { e.preventDefault(); setVideoFile(null); }} className="p-1 hover:bg-red-100 rounded-full text-red-500 z-10"><X size={16}/></button>
+                  {/* Video Upload / Live Info */}
+                  {campaignType === 'video' ? (
+                    <div>
+                        <label className="block text-sm font-semibold text-aid-dark mb-2">Video Pitch (Max 60s)</label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-aid-green/60 transition-colors cursor-pointer relative bg-gray-50/50 group hover:bg-gray-50">
+                            <input
+                                type="file"
+                                accept="video/*"
+                                onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        if (file.size > 50 * 1024 * 1024) return toast.error("File too large (Max 50MB)");
+                                        setVideoFile(file);
+                                    }
+                                }}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                            {videoFile ? (
+                                <div className="flex items-center justify-center gap-3 text-aid-green">
+                                    <div className="w-10 h-10 bg-aid-green/10 rounded-lg flex items-center justify-center">
+                                      <VideoIcon size={20} />
                                     </div>
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center text-gray-400 group-hover:text-aid-green">
-                                        <UploadCloud size={32} className="mb-2" />
-                                        <p className="text-sm font-semibold">Click to upload video</p>
-                                        <p className="text-xs">MP4, WebM (Max 60s)</p>
+                                    <div className="text-left flex-1 min-w-0">
+                                      <p className="font-semibold truncate">{videoFile.name}</p>
+                                      <p className="text-xs text-gray-500">{(videoFile.size / (1024 * 1024)).toFixed(2)} MB</p>
                                     </div>
-                                )}
-                            </div>
-                        </>
-                    ) : (
-                        <div className="bg-red-50 border border-red-100 rounded-xl p-4 text-center">
-                            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-2 text-red-500">
-                                <Radio size={24} />
-                            </div>
-                            <h4 className="text-red-800 font-bold mb-1">Live Fundraising Event</h4>
-                            <p className="text-xs text-red-600/80">
-                                A live streaming room will be created for you. You can start streaming immediately after the campaign is deployed on-chain.
-                            </p>
+                                    <button 
+                                      onClick={(e) => { e.preventDefault(); setVideoFile(null); }} 
+                                      className="p-1.5 hover:bg-red-50 rounded-lg text-red-500 z-10 transition-colors"
+                                    >
+                                      <X size={18}/>
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center text-gray-400 group-hover:text-aid-green/70">
+                                    <UploadCloud size={36} className="mb-3" />
+                                    <p className="text-sm font-semibold text-gray-600">Click to upload video</p>
+                                    <p className="text-xs mt-1">MP4, WebM (Max 50MB, 60s)</p>
+                                </div>
+                            )}
                         </div>
-                    )}
-                </div>
-
-                <div>
-                    <label className="block text-sm font-bold text-aid-dark mb-1">Category</label>
-                    <select
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-aid-green focus:ring-1 focus:ring-aid-green"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    >
-                    <option value="Disaster Relief">Disaster Relief</option>
-                    <option value="Infrastructure Repair">Infrastructure Repair</option>
-                    <option value="Medical Aid">Medical Aid</option>
-                    <option value="Emergency Shelter">Emergency Shelter</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-bold text-aid-dark mb-1">Location (Province)</label>
-                    <div className="relative">
-                        <input 
-                            list="provinces" 
-                            className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-aid-green focus:ring-1 focus:ring-aid-green"
-                            placeholder="Search province..."
-                            value={formData.province}
-                            onChange={(e) => setFormData({...formData, province: e.target.value})}
-                        />
-                        <datalist id="provinces">
-                            {PROVINCES.map((p) => (
-                                <option key={p} value={p} />
-                            ))}
-                        </datalist>
                     </div>
-                </div>
+                  ) : (
+                    <div className="bg-gradient-to-br from-red-50 to-orange-50 border border-red-100 rounded-xl p-5 text-center">
+                        <div className="w-14 h-14 bg-white/80 backdrop-blur rounded-full flex items-center justify-center mx-auto mb-3 text-red-500 shadow-sm">
+                            <Radio size={24} />
+                        </div>
+                        <h4 className="text-red-800 font-bold mb-1.5">Live Fundraising Event</h4>
+                        <p className="text-xs text-red-600/80 leading-relaxed">
+                            A live streaming room will be created for you. Start streaming immediately after the campaign is deployed on-chain.
+                        </p>
+                    </div>
+                  )}
 
-                <div>
-                    <label className="block text-sm font-bold text-aid-dark mb-1">Target Amount (IDRX)</label>
+                  {/* Form Fields */}
+                  <div>
+                    <label className="block text-sm font-semibold text-aid-dark mb-1.5">Campaign Title</label>
                     <input
-                    type="number"
-                    step="1000"
-                    required
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-aid-green focus:ring-1 focus:ring-aid-green transition-all"
-                    placeholder="e.g., 5000000"
-                    value={formData.targetAmount}
-                    onChange={(e) => setFormData({ ...formData, targetAmount: e.target.value })}
+                      type="text"
+                      required
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-aid-green focus:ring-2 focus:ring-aid-green/20 transition-all bg-gray-50/50 focus:bg-white"
+                      placeholder="e.g., Flood Relief for Village X"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     />
-                </div>
+                  </div>
 
-                <div>
-                    <label className="block text-sm font-bold text-aid-dark mb-1">End Date</label>
-                    <input
-                    type="date"
-                    required
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-aid-green focus:ring-1 focus:ring-aid-green transition-all"
-                    value={formData.endDate}
-                    min={new Date().toISOString().split('T')[0]}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    />
-                </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-aid-dark mb-1.5">Category</label>
+                      <select
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-aid-green focus:ring-2 focus:ring-aid-green/20 transition-all bg-gray-50/50 focus:bg-white appearance-none"
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      >
+                        <option value="Disaster Relief">Disaster Relief</option>
+                        <option value="Infrastructure Repair">Infrastructure Repair</option>
+                        <option value="Medical Aid">Medical Aid</option>
+                        <option value="Emergency Shelter">Emergency Shelter</option>
+                      </select>
+                    </div>
 
-                <div>
-                    <div className="flex justify-between items-center mb-1">
-                        <label className="text-sm font-bold text-aid-dark">Description</label>
-                        <span className={`text-xs font-bold ${formData.description.length >= 350 ? 'text-red-500' : 'text-gray-400'}`}>
+                    <div>
+                      <label className="block text-sm font-semibold text-aid-dark mb-1.5">Province</label>
+                      <input
+                        list="provinces"
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-aid-green focus:ring-2 focus:ring-aid-green/20 transition-all bg-gray-50/50 focus:bg-white"
+                        placeholder="Select province..."
+                        value={formData.province}
+                        onChange={(e) => setFormData({...formData, province: e.target.value})}
+                      />
+                      <datalist id="provinces">
+                        {PROVINCES.map((p) => (
+                            <option key={p} value={p} />
+                        ))}
+                      </datalist>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-aid-dark mb-1.5">Target Amount (IDRX)</label>
+                      <input
+                        type="number"
+                        step="1000"
+                        required
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-aid-green focus:ring-2 focus:ring-aid-green/20 transition-all bg-gray-50/50 focus:bg-white"
+                        placeholder="5000000"
+                        value={formData.targetAmount}
+                        onChange={(e) => setFormData({ ...formData, targetAmount: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-aid-dark mb-1.5">End Date</label>
+                      <input
+                        type="date"
+                        required
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-aid-green focus:ring-2 focus:ring-aid-green/20 transition-all bg-gray-50/50 focus:bg-white"
+                        value={formData.endDate}
+                        min={new Date().toISOString().split('T')[0]}
+                        onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1.5">
+                        <label className="text-sm font-semibold text-aid-dark">Description</label>
+                        <span className={`text-xs font-medium ${formData.description.length >= 320 ? 'text-red-500' : 'text-gray-400'}`}>
                             {350 - formData.description.length} chars left
                         </span>
                     </div>
                     <textarea
-                    required
-                    rows={4}
-                    maxLength={350}
-                    className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:border-aid-green focus:ring-1 focus:ring-aid-green transition-all resize-none"
-                    placeholder="Tell your story and why funds are needed..."
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      required
+                      rows={3}
+                      maxLength={350}
+                      className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:border-aid-green focus:ring-2 focus:ring-aid-green/20 transition-all bg-gray-50/50 focus:bg-white resize-none"
+                      placeholder="Tell your story and why funds are needed..."
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     />
-                </div>
-
-                <div className="pt-4">
-                    <Button
-                    type="submit"
-                    variant="primary"
-                    className="w-full justify-center"
-                    disabled={uploadStep !== 'idle' || isWalletConfirming || isTransactionConfirming}
-                    >
-                    {uploadStep === 'uploading_video' ? (
-                        <>
-                        <Loader2 className="animate-spin mr-2" size={18} />
-                        {campaignType === 'live' ? 'Creating Live Room...' : `Uploading Video (${Math.round(uploadProgress * 100)}%)`}
-                        </>
-                    ) : uploadStep === 'uploading_metadata' ? (
-                        <>
-                        <Loader2 className="animate-spin mr-2" size={18} />
-                        Pinning to IPFS...
-                        </>
-                    ) : isWalletConfirming || uploadStep === 'blockchain' ? (
-                        <>
-                        <Loader2 className="animate-spin mr-2" size={18} />
-                        Confirm in Wallet...
-                        </>
-                    ) : isTransactionConfirming ? (
-                       <>
-                        <Loader2 className="animate-spin mr-2" size={18} />
-                        Deploying Contract...
-                        </>
-                    ) : (
-                        "Create Campaign"
-                    )}
-                    </Button>
-                </div>
+                  </div>
                 </form>
+              )}
+            </div>
+
+            {/* Footer / Submit Button */}
+            {!isTransactionSuccess && (
+              <div className="flex-shrink-0 px-6 py-4 border-t border-gray-100 bg-gray-50/50 rounded-b-3xl">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="w-full justify-center py-3 text-base font-semibold shadow-lg shadow-aid-green/20"
+                  disabled={uploadStep !== 'idle' || isWalletConfirming || isTransactionConfirming}
+                  onClick={handleSubmit}
+                >
+                  {uploadStep === 'uploading_video' ? (
+                      <>
+                      <Loader2 className="animate-spin mr-2" size={18} />
+                      {campaignType === 'live' ? 'Creating Live Room...' : `Uploading Video (${Math.round(uploadProgress * 100)}%)`}
+                      </>
+                  ) : uploadStep === 'uploading_metadata' ? (
+                      <>
+                      <Loader2 className="animate-spin mr-2" size={18} />
+                      Pinning to IPFS...
+                      </>
+                  ) : isWalletConfirming || uploadStep === 'blockchain' ? (
+                      <>
+                      <Loader2 className="animate-spin mr-2" size={18} />
+                      Confirm in Wallet...
+                      </>
+                  ) : isTransactionConfirming ? (
+                    <>
+                      <Loader2 className="animate-spin mr-2" size={18} />
+                      Deploying Contract...
+                    </>
+                  ) : (
+                      "Create Campaign"
+                  )}
+                </Button>
+              </div>
             )}
-            
           </motion.div>
         </div>
       )}
