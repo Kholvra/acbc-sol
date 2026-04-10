@@ -7,7 +7,7 @@ import { useAccount, useReadContract, useReadContracts } from 'wagmi';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { FACTORY_ADDRESS, FACTORY_ABI, CAMPAIGN_ABI } from '~/constants/contracts';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Compass } from 'lucide-react';
 import TikTokLayout from '~/components/layout/tiktok-layout';
 import Button from '~/components/ui/button';
 import { fetchJSONFromIPFS } from '~/utils/pinata';
@@ -152,14 +152,26 @@ const DashboardPage = () => {
                     ))
                 ) : (
                     <div className="h-full w-full flex flex-col items-center justify-center snap-start text-center p-8">
-                        <div className="w-24 h-24 bg-aid-yellow/20 rounded-full flex items-center justify-center mb-6">
-                            <Loader2 className="text-aid-yellow animate-pulse" size={48} />
-                        </div>
-                        <h3 className="font-heading font-black text-3xl mb-4 text-aid-dark">No campaigns found</h3>
-                        <p className="text-aid-dark/60 mb-8 font-body text-lg max-w-sm">There are no active relief efforts at the moment. Be the first to start one!</p>
-                        <Button variant="primary" size="lg" onClick={() => setIsModalOpen(true)}>
-                            Create First Campaign
-                        </Button>
+                        {profile?.role === 'CAMPAIGNER' ? (
+                            <>
+                                <div className="w-24 h-24 bg-aid-yellow/20 rounded-full flex items-center justify-center mb-6">
+                                    <Loader2 className="text-aid-yellow animate-pulse" size={48} />
+                                </div>
+                                <h3 className="font-heading font-black text-3xl mb-4 text-aid-dark">No campaigns found</h3>
+                                <p className="text-aid-dark/60 mb-8 font-body text-lg max-w-sm">There are no active relief efforts at the moment. Be the first to start one!</p>
+                                <Button variant="primary" size="lg" onClick={() => setIsModalOpen(true)}>
+                                    Create First Campaign
+                                </Button>
+                            </>
+                        ) : (
+                            <>
+                                <div className="w-24 h-24 bg-aid-green/20 rounded-full flex items-center justify-center mb-6">
+                                    <Compass className="text-aid-green" size={48} />
+                                </div>
+                                <h3 className="font-heading font-black text-3xl mb-4 text-aid-dark">Welcome, Supporter!</h3>
+                                <p className="text-aid-dark/60 font-body text-lg max-w-sm">Browse active campaigns above or explore the Explore page to find causes you'd like to support.</p>
+                            </>
+                        )}
                     </div>
                 )}
             </div>

@@ -4,6 +4,7 @@ import React from 'react';
 import Sidebar from './sidebar';
 import BottomNav from './bottom-nav';
 import Aurora from '../ui/aurora';
+import { api } from '~/trpc/react';
 
 interface TikTokLayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,10 @@ interface TikTokLayoutProps {
 }
 
 const TikTokLayout: React.FC<TikTokLayoutProps> = ({ children, onOpenCreate }) => {
+  const { data: profile } = api.user.getProfile.useQuery(undefined, {
+    retry: false,
+  });
+
   return (
     <div className="flex min-h-screen bg-aid-offwhite text-aid-dark font-body relative overflow-hidden">
       {/* Global Aurora Background */}
@@ -32,7 +37,7 @@ const TikTokLayout: React.FC<TikTokLayoutProps> = ({ children, onOpenCreate }) =
       </main>
 
       {/* Bottom Nav - Mobile Only */}
-      <BottomNav onOpenCreate={onOpenCreate} />
+      <BottomNav onOpenCreate={onOpenCreate} userRole={profile?.role ?? null} />
     </div>
   );
 };
