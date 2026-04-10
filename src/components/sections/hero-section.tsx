@@ -60,12 +60,10 @@ const HeroSection: React.FC = () => {
           </p>
           
           <div className="flex flex-col sm:row gap-4 pt-4">
-            <Button size="lg" className="group shadow-xl shadow-aid-green/20 hover:shadow-aid-green/40 transition-shadow">
+            <Button size="lg" rightIcon={<ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />} className="group shadow-xl shadow-aid-green/20 hover:shadow-aid-green/40 transition-shadow">
               Start a Campaign
-              <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
-            <Button variant="outline" size="lg" className="group bg-white/50 backdrop-blur-sm hover:bg-white/80">
-              <PlayCircle className="mr-2 w-5 h-5 group-hover:scale-110 transition-transform" />
+            <Button variant="outline" size="lg" leftIcon={<PlayCircle className="w-5 h-5 group-hover:scale-110 transition-transform" />} className="group bg-white/50 backdrop-blur-sm hover:bg-white/80">
               Watch Demo
             </Button>
           </div>
