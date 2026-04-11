@@ -403,8 +403,8 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
                         <div className="flex items-end gap-3">
                             <div className="flex-1">
                                 <div className="w-full bg-white/30 h-3 rounded-full overflow-hidden mb-1 backdrop-blur-sm relative state-layer">
-                                    <div 
-                                        className="bg-aid-green h-full rounded-full transition-all duration-1000 ease-out" 
+                                    <div
+                                        className="bg-aid-green h-full rounded-full transition-all duration-1000 ease-out"
                                         style={{width: `${progress}%`}}
                                     />
                                 </div>
@@ -413,15 +413,6 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
                                     <span>Goal: IDRX {Number(target).toLocaleString('id-ID')}</span>
                                 </div>
                             </div>
-                            
-                            {!isExpanded && (
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); setIsQuickDonating(true); }}
-                                    className="w-8 h-8 rounded-full bg-aid-green flex items-center justify-center text-white hover:bg-aid-dark hover:scale-110 active:scale-95 transition-all shadow-md z-40 shrink-0 mb-4" 
-                                >
-                                    <span className="font-heading font-black text-lg pb-0.5">+</span>
-                                </button>
-                            )}
                         </div>
 
                         {isExpanded && (
