@@ -7,7 +7,6 @@ type Agreement = RouterOutputs['agreement']['list'][number];
 
 interface AgreementListProps {
   agreements: Agreement[];
-  campaignId: string;
 }
 
 const statusColors: Record<string, string> = {

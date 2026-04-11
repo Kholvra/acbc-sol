@@ -1,9 +1,8 @@
 'use client';
 
-import { use, useEffect } from 'react';
+import { use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, FileText } from 'lucide-react';
-import { toast } from 'sonner';
 import { api } from '~/trpc/react';
 import TikTokLayout from '~/components/layout/tiktok-layout';
 import Button from '~/components/ui/button';
@@ -31,12 +30,6 @@ export default function AgreementsPage({ params }: AgreementsPageProps) {
       staleTime: 30 * 1000,
     }
   );
-
-  useEffect(() => {
-    if (error) {
-      toast.error(error.message || 'Failed to load agreements');
-    }
-  }, [error]);
 
   const handleCreateNew = () => {
     router.push(`/campaigns/${campaignId}/agreements/new`);
@@ -81,7 +74,7 @@ export default function AgreementsPage({ params }: AgreementsPageProps) {
               }}
             />
           ) : agreements && agreements.length > 0 ? (
-            <AgreementList agreements={agreements} campaignId={campaignId} />
+            <AgreementList agreements={agreements} />
           ) : (
             <EmptyState
               title="No Agreements Yet"
