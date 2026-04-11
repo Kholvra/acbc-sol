@@ -21,7 +21,6 @@ model User {
   kycDocument KycDocument?
 
   campaigns Campaign[]
-  invoices  Invoice[]
 }
 
 model KycDocument {
@@ -54,7 +53,7 @@ model Campaign {
   creator User @relation(fields: [creatorId], references: [id])
 
   items    CampaignItem[]
-  invoices Invoice[]
+  purchaseAgreements PurchaseAgreement[]
 }
 
 model CampaignItem {
@@ -72,52 +71,90 @@ model CampaignItem {
   @@index([campaignId])
 }
 
-model Invoice {
-  id            String   @id @default(cuid())
-  campaignId    String
-  submittedById String
+model PurchaseAgreement {
+  id              String          @id @default(cuid())
+  campaignId      String
+  campaign        Campaign        @relation(fields: [campaignId], references: [id])
 
-  storeName     String?
-  invoiceNumber String?
-  invoiceDate   DateTime?
-  totalAmount   Int?
+  vendorName      String
+  vendorAddress   String?
+  category        ExpenseCategory
 
-  createdAt DateTime @default(now())
+  startDate       DateTime
+  endDate         DateTime
+  paymentTerms    PaymentTerms    @default(FULL_PAYMENT)
 
-  campaign    Campaign            @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  submittedBy User                @relation(fields: [submittedById], references: [id])
-  attachments InvoiceAttachment[]
-  items       InvoiceItem[]
+  totalAmount     Decimal         @db.Decimal(15, 2)
+  status          AgreementStatus @default(DRAFT)
+
+  submittedAt     DateTime?
+  approvedAt      DateTime?
+  approvedBy      String?
+  rejectionReason String?
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  items           AgreementItem[]
+  invoice         Invoice?
 
   @@index([campaignId])
+  @@index([status])
+  @@map("purchase_agreements")
+}
+
+model AgreementItem {
+  id              String            @id @default(cuid())
+  agreementId     String
+  agreement       PurchaseAgreement @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+
+  itemName        String
+  specifications  String?
+  unitPrice       Decimal           @db.Decimal(15, 2)
+  quantity        Int
+  subtotal        Decimal           @db.Decimal(15, 2)
+
+  @@index([agreementId])
+  @@map("agreement_items")
+}
+
+model Invoice {
+  id              String          @id @default(cuid())
+  agreementId     String          @unique
+  agreement       PurchaseAgreement @relation(fields: [agreementId], references: [id])
+
+  invoiceNumber   String
+  invoiceDate     DateTime
+  totalAmount     Decimal         @db.Decimal(15, 2)
+  status          InvoiceStatus   @default(PENDING_VERIFICATION)
+
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  notes           String?
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  attachments     InvoiceAttachment[]
+
+  @@index([status])
+  @@map("invoices")
 }
 
 model InvoiceAttachment {
-  id        String @id @default(cuid())
-  invoiceId String
+  id              String    @id @default(cuid())
+  invoiceId       String
+  invoice         Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
-  fileUrl   String
-  fileType  String
+  fileName        String
+  fileUrl         String
+  fileType        String
+  fileSize        Int
 
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
-
-  uploadedAt DateTime @default(now())
-
-  @@index([invoiceId])
-}
-
-model InvoiceItem {
-  id        String @id @default(cuid())
-  invoiceId String
-
-  itemName  String
-  quantity  Int?
-  price     Int?
-  total     Int?
-
-  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  createdAt       DateTime  @default(now())
 
   @@index([invoiceId])
+  @@map("invoice_attachments")
 }
 
 enum DocumentType {
@@ -127,4 +164,32 @@ enum DocumentType {
 enum Role {
   DONATUR
   CAMPAIGNER
+  ADMIN
+}
+
+enum AgreementStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+enum InvoiceStatus {
+  PENDING_VERIFICATION
+  VERIFIED
+  REJECTED
+}
+
+enum ExpenseCategory {
+  MEDICAL
+  CONSTRUCTION
+  GROCERIES
+  TRANSPORTATION
+  UTILITIES
+  OTHER
+}
+
+enum PaymentTerms {
+  FULL_PAYMENT
+  INSTALLMENT
 }
