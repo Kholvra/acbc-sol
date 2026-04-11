@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Quote } from 'lucide-react';
+import Image from 'next/image';
 import { TESTIMONIALS } from '~/constants';
 import Section from '../ui/section';
 
@@ -40,14 +41,14 @@ const TestimonialsSection: React.FC = () => {
                     
                     <div className="relative z-10">
                         <p className="font-accent text-xl md:text-2xl text-aid-dark italic mb-8 leading-relaxed">
-                            "{testimonial.quote}"
+                            &ldquo;{testimonial.quote}&rdquo;
                         </p>
                         
                         <div className="flex items-center gap-5 pt-6 border-t-2 border-aid-offwhite">
                             <div className="relative">
                                 <div className="absolute inset-0 bg-aid-green rounded-full blur-sm opacity-30 translate-y-1"></div>
                                 <div className="relative w-14 h-14 rounded-full bg-aid-yellow ring-4 ring-white shadow-sm overflow-hidden">
-                                    <img src={`https://picsum.photos/seed/${testimonial.id}/100`} alt={testimonial.author} className="w-full h-full object-cover" />
+                                    <Image src={`https://picsum.photos/seed/${testimonial.id}/100`} alt={testimonial.author} width={56} height={56} className="w-full h-full object-cover" />
                                 </div>
                             </div>
                             <div>

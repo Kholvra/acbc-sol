@@ -181,7 +181,7 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
     }
   };
 
-  const resetForm = () => {
+  const resetForm = React.useCallback(() => {
       setFormData({
         title: '',
         description: '',
@@ -191,7 +191,7 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
         province: ''
       });
       onClose();
-  }
+  }, [onClose]);
 
   useEffect(() => {
     if (writeError) {

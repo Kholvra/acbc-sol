@@ -27,7 +27,7 @@ export function FormInput({
   placeholder,
   error,
   prefix,
-  rows = 3,
+  rows: _rows = 3,
   min,
   className = '',
   register,

@@ -8,7 +8,7 @@ interface AuthenticatedLayoutProps {
 }
 
 const AuthenticatedLayout: React.FC<AuthenticatedLayoutProps> = ({ children }) => {
-  const { isConnected } = useAccount();
+  useAccount();
 
   // In the real app, we would use NextAuth session or wagmi connection.
   // For now, mirroring the source logic which just renders children to unblock dev.

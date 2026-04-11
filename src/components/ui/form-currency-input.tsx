@@ -35,11 +35,6 @@ export function FormCurrencyInput<T extends FieldValues = FieldValues>({
     return num.toLocaleString('id-ID');
   };
 
-  const parseNumber = (value: string): number => {
-    const cleaned = value.replace(/\./g, '');
-    return parseInt(cleaned, 10) || 0;
-  };
-
   const displayValue = formatNumber(field.value as number);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,7 +43,7 @@ export function FormCurrencyInput<T extends FieldValues = FieldValues>({
     field.onChange(numValue);
   };
 
-  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+  const handleBlur = (_e: React.FocusEvent<HTMLInputElement>) => {
     field.onBlur();
   };
 

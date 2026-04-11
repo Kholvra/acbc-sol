@@ -30,7 +30,6 @@ export function Stepper({ steps, currentStep, className = '' }: StepperProps) {
         {steps.map((step) => {
           const isCompleted = currentStep > step.number;
           const isActive = currentStep === step.number;
-          const isPending = currentStep < step.number;
 
           return (
             <div key={step.id} className="flex flex-col items-center">

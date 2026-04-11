@@ -7,7 +7,7 @@ import TikTokLayout from '~/components/layout/tiktok-layout';
 import CampaignCreationModal from '~/components/campaign/campaign-creation-modal';
 import { useReadContract, useReadContracts } from 'wagmi';
 import { FACTORY_ADDRESS, FACTORY_ABI, CAMPAIGN_ABI } from '~/constants/contracts';
-import { fetchJSONFromIPFS, type CampaignIPFSMetadata } from '~/utils/pinata';
+import { fetchJSONFromIPFS } from '~/utils/pinata';
 import { formatEther } from 'viem';
 import { getStandardProvinceName } from '~/utils/provinceNames';
 import type { IndonesiaGeoJson } from '~/types/map';

@@ -97,7 +97,7 @@ const SignInPage: React.FC = () => {
     if (!isConnected) {
       lastAuthAttemptAddress.current = null;
     }
-  }, [isConnected, address, isAuthenticating, status]);
+  }, [isConnected, address, isAuthenticating, status, handleSignIn]);
 
   // redirect to dashboard if authenticated and profile exists
   useEffect(() => {

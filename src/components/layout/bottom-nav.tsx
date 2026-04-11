@@ -37,9 +37,9 @@ const BottomNav: React.FC<BottomNavProps> = ({ onOpenCreate, userRole }) => {
         }
 
         return (
-            <button 
+            <button
                 key={item.label}
-                onClick={() => router.push(item.path as string)}
+                onClick={() => router.push(item.path!)}
                 className={`flex flex-col items-center gap-1 transition-all duration-300 w-16 ${
                     item.active ? 'text-[#658C58] -translate-y-1' : 'text-[#658C58]/50 hover:text-[#658C58]'
                 }`}

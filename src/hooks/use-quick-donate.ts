@@ -33,14 +33,12 @@ export function useQuickDonate({
     error: donateError
   } = useWriteContract();
 
-  const { 
-    isLoading: isApproving, 
-    isSuccess: approveSuccess 
+  const {
+    isSuccess: approveSuccess
   } = useWaitForTransactionReceipt({ hash: approveHash });
 
-  const { 
-    isLoading: isDonating, 
-    isSuccess: donateSuccess 
+  const {
+    isSuccess: donateSuccess
   } = useWaitForTransactionReceipt({ hash: donateHash });
 
   // Check current allowance
