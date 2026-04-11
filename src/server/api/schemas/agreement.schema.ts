@@ -33,8 +33,8 @@ export const createAgreementSchema = z.object({
   vendorName: z.string().min(1, "Vendor name is required"),
   vendorAddress: z.string().optional(),
   category: expenseCategorySchema,
-  startDate: z.date(),
-  endDate: z.date(),
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date(),
   paymentTerms: paymentTermsSchema,
   items: z.array(agreementItemSchema).min(1, "At least 1 item is required"),
 });
