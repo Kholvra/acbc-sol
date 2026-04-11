@@ -218,7 +218,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
                     }}
                     disabled={isQuickDonatingProcess}
                     aria-label={`Quick donate ${QUICK_DONATE_AMOUNT} IDRX`}
-                    className="bg-aid-green hover:bg-aid-dark text-white font-black w-14 h-14 rounded-full shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed items-center justify-center group border-2 border-white/20 focus:outline-none focus:ring-2 focus:ring-aid-green focus:ring-offset-2"
+                    className="bg-aid-green hover:bg-aid-dark active:scale-95 text-white font-black w-14 h-14 rounded-full shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed items-center justify-center group border-2 border-white/20 focus:outline-none focus:ring-2 focus:ring-aid-green focus:ring-offset-2"
                 >
                     {isQuickDonatingProcess ? (
                         <Loader2 className="w-6 h-6 animate-spin" />
