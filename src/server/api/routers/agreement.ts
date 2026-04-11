@@ -12,7 +12,7 @@ import {
 
 // Helper to check if user owns the agreement's campaign
 async function verifyAgreementOwnership(
-  db: typeof import("~/server/db").db,
+  prismaDb: { purchaseAgreement: { findUnique: (args: { where: { id: string }; include: { campaign: { select: { creatorId: true } } } }) => Promise<{ campaign: { creatorId: string } } | null> } },
   agreementId: string,
   userId: string
 ): Promise<boolean> {
