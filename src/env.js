@@ -12,6 +12,7 @@ export const env = createEnv({
         ? z.string()
         : z.string().optional(),
     DATABASE_URL: z.string().url(),
+    DIRECT_URL: z.string().url().optional(),
     GROQ_API_KEY: z.string(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
@@ -40,6 +41,7 @@ export const env = createEnv({
   runtimeEnv: {
     AUTH_SECRET: process.env.AUTH_SECRET,
     DATABASE_URL: process.env.DATABASE_URL,
+    DIRECT_URL: process.env.DIRECT_URL,
     NODE_ENV: process.env.NODE_ENV,
     VIDEOSDK_SECRET_KEY: process.env.VIDEOSDK_SECRET_KEY,
     NEXT_PUBLIC_PINATA_JWT: process.env.NEXT_PUBLIC_PINATA_JWT,
