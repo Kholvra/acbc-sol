@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { mockAgreements, mockPendingAgreements } from '~/mocks/agreements';
+import { mockPendingAgreements } from '~/mocks/agreements';
 import type { AgreementFormData } from '~/components/agreements/schemas';
 
 export function useMockAgreements(campaignAddress: string) {

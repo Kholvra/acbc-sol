@@ -100,7 +100,7 @@ const LiveCreationModal: React.FC<LiveCreationModalProps> = ({ isOpen, onClose }
             }
         };
 
-        const ipfsHash = await uploadJSONToIPFS(metadata) as string;
+        const ipfsHash = await uploadJSONToIPFS(metadata);
         if (!ipfsHash) throw new Error("Metadata upload failed");
 
         setStep('blockchain');

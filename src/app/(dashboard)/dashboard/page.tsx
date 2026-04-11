@@ -42,7 +42,6 @@ const DashboardPage = () => {
   });
 
   const { data: campaignsData } = useReadContracts({
-    // @ts-expect-error - Wagmi contracts array type is complex
     contracts: campaignAddresses?.flatMap((addr) => [
       { address: addr, abi: CAMPAIGN_ABI, functionName: 'isActive' },
       { address: addr, abi: CAMPAIGN_ABI, functionName: 'metadata' }
@@ -66,15 +65,16 @@ const DashboardPage = () => {
               if (activeResult?.status === 'success' && activeResult.result === false) return;
 
               if (metaResult?.status === 'success') {
-                  const meta = metaResult.result as Record<string, unknown>;
+                  const meta = metaResult.result as unknown as Record<string, unknown>;
                   const descriptionIPFS = meta[1] as string | undefined;
 
-                  if (descriptionIPFS && descriptionIPFS.startsWith('ipfs://')) {
+                  if (descriptionIPFS?.startsWith('ipfs://')) {
                       try {
-                          const data = await fetchJSONFromIPFS(descriptionIPFS);
-                          if (data && typeof data === 'object' && 'properties' in data && data.properties && typeof data.properties === 'object' && 'endDate' in data.properties) {
-                               const properties = data.properties as Record<string, unknown>;
-                               if (properties.endDate && typeof properties.endDate === 'string' && isCampaignExpired(properties.endDate)) {
+                          const data = await fetchJSONFromIPFS(descriptionIPFS) as Record<string, unknown> | null;
+                          const props = data?.properties;
+                          if (props && typeof props === 'object' && 'endDate' in props) {
+                               const typedProps = props as Record<string, unknown>;
+                               if (typedProps.endDate && typeof typedProps.endDate === 'string' && isCampaignExpired(typedProps.endDate)) {
                                    expired.add(addr);
                                }
                           }
@@ -169,7 +169,7 @@ const DashboardPage = () => {
                                     <Compass className="text-aid-green" size={48} />
                                 </div>
                                 <h3 className="font-heading font-black text-3xl mb-4 text-aid-dark">Welcome, Supporter!</h3>
-                                <p className="text-aid-dark/60 font-body text-lg max-w-sm">Browse active campaigns above or explore the Explore page to find causes you'd like to support.</p>
+                                <p className="text-aid-dark/60 font-body text-lg max-w-sm">Browse active campaigns above or explore the Explore page to find causes you&apos;d like to support.</p>
                             </>
                         )}
                     </div>

@@ -55,7 +55,7 @@ const HowItWorksSection: React.FC = () => {
   );
 };
 
-const StepItem = ({ step, index }: { step: any, index: number }) => {
+const StepItem = ({ step, index }: { step: { id: number; title: string; description: string }, index: number }) => {
     const isEven = index % 2 === 0;
 
     return (

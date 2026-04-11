@@ -44,7 +44,7 @@ export function SwipeGestureWrapper({
     });
   };
 
-  const handleDragEnd = (_: any, info: { offset: { x: number }; velocity: { x: number } }) => {
+  const handleDragEnd = (_event: unknown, _info: { offset: { x: number }; velocity: { x: number } }) => {
     if (!enabled || isReturning) return;
 
     const currentX = x.get();

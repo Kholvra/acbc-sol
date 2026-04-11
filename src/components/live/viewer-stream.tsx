@@ -72,7 +72,7 @@ interface CampaignMetadata {
 }
 
 const ViewerOverlay = ({ campaignAddress }: { campaignAddress?: string }) => {
-    const { participants, leave, join, meetingId } = useMeeting();
+    const { participants, join, meetingId } = useMeeting();
     const router = useRouter();
 
     useEffect(() => {

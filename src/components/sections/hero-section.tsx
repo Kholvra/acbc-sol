@@ -3,6 +3,7 @@
 import React from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { PlayCircle, ArrowRight, Heart, MapPin, Shield } from 'lucide-react';
+import Image from 'next/image';
 import Button from '../ui/button';
 import Section from '../ui/section';
 
@@ -72,7 +73,7 @@ const HeroSection: React.FC = () => {
               <div className="flex -space-x-3">
                   {[1,2,3,4].map(i => (
                       <div key={i} className="w-8 h-8 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center text-[10px] overflow-hidden">
-                          <img src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="User" />
+                          <Image src={`https://i.pravatar.cc/100?img=${i + 10}`} alt="User" width={32} height={32} />
                       </div>
                   ))}
               </div>
@@ -104,10 +105,11 @@ const HeroSection: React.FC = () => {
                     </div>
 
                     <div className="flex-1 relative bg-gray-800">
-                         <img 
-                            src="https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&w=800&q=80" 
-                            alt="Disaster Relief" 
-                            className="w-full h-full object-cover opacity-80"
+                         <Image
+                            src="https://images.unsplash.com/photo-1593113598332-cd288d649433?auto=format&fit=crop&w=800&q=80"
+                            alt="Disaster Relief"
+                            fill
+                            className="object-cover opacity-80"
                          />
                          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/80"></div>
                          
@@ -127,8 +129,8 @@ const HeroSection: React.FC = () => {
                     
                     <div className="h-[220px] bg-white/10 backdrop-blur-xl border-t border-white/10 p-5 space-y-4 absolute bottom-0 w-full z-20">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-yellow-400 border-2 border-white shadow-lg overflow-hidden">
-                                <img src="https://i.pravatar.cc/100?img=33" alt="Host" />
+                            <div className="w-10 h-10 rounded-full bg-yellow-400 border-2 border-white shadow-lg overflow-hidden relative">
+                                <Image src="https://i.pravatar.cc/100?img=33" alt="Host" fill />
                             </div>
                             <div>
                                 <h3 className="text-white font-bold text-sm">Emergency Relief Fund</h3>

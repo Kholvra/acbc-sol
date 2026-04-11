@@ -1,5 +1,3 @@
-import { pinataVideo } from './client';
-
 export interface VideoUploadResult {
   ipfsHash: string;
   fileName: string;
@@ -44,11 +42,6 @@ export function validateVideoFile(file: File): VideoValidationResult {
   }
 
   return { isValid: true };
-}
-
-function getFileExtension(filename: string): string {
-  const ext = filename.slice((filename.lastIndexOf('.') - 1 >>> 0) + 2);
-  return ext ? `.${ext.toLowerCase()}` : '';
 }
 
 function sanitizeFileName(fileName: string): string {

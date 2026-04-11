@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import WalletWrapper from '../providers/wallet-wrapper';
@@ -63,10 +64,12 @@ const Navbar: React.FC = () => {
         >
              {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
-                <img 
-                    src="/images/logo-aidbeacon.png" 
-                    alt="AidBeacon" 
-                    className="h-10 w-auto object-contain drop-shadow-sm transition-transform duration-300 group-hover:scale-105" 
+                <Image
+                    src="/images/logo-aidbeacon.png"
+                    alt="AidBeacon"
+                    width={40}
+                    height={40}
+                    className="h-10 w-auto object-contain drop-shadow-sm transition-transform duration-300 group-hover:scale-105"
                 />
                 <span className={`font-heading font-black tracking-tight text-aid-dark transition-all duration-300 ${isScrolled ? 'text-xl' : 'text-2xl'}`}>
                     AidBeacon

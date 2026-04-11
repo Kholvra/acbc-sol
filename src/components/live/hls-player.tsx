@@ -16,7 +16,9 @@ const HLSPlayer: React.FC<HLSPlayerProps> = ({ url }) => {
       hls.loadSource(url);
       hls.attachMedia(videoRef.current);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        videoRef.current?.play().catch(() => {});
+        videoRef.current?.play().catch(() => {
+          // Autoplay blocked - user interaction required
+        });
       });
       return () => {
           hls.destroy();
@@ -26,7 +28,9 @@ const HLSPlayer: React.FC<HLSPlayerProps> = ({ url }) => {
     ) {
       videoRef.current.src = url;
       videoRef.current.addEventListener("loadedmetadata", () => {
-        videoRef.current?.play().catch(() => {});
+        videoRef.current?.play().catch(() => {
+          // Autoplay blocked - user interaction required
+        });
       });
     }
   }, [url]);

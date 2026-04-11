@@ -104,13 +104,11 @@ export const authConfig = {
 
         let user: { id: string; address: string; role: string | null } | null = await db.user.findUnique({
           where: { address: normalizedAddress },
-        }) as { id: string; address: string; role: string | null } | null;
+        });
 
-        if (!user) {
-          user = await db.user.create({
+        user ??= await db.user.create({
             data: { address: normalizedAddress },
-          }) as { id: string; address: string; role: string | null };
-        }
+          });
 
         return {
           id: user.id,
