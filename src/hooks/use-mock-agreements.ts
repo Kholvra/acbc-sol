@@ -4,21 +4,21 @@ import { useState, useEffect } from 'react';
 import { mockAgreements, mockPendingAgreements } from '~/mocks/agreements';
 import type { AgreementFormData } from '~/components/agreements/schemas';
 
-export function useMockAgreements(campaignId: string) {
+export function useMockAgreements(campaignAddress: string) {
   const [data, setData] = useState<typeof mockPendingAgreements>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Simulate API delay
     const timer = setTimeout(() => {
-      // Filter mock data by campaignId
-      const filtered = mockPendingAgreements.filter(a => a.campaignId === campaignId);
+      // Filter mock data by campaignAddress
+      const filtered = mockPendingAgreements.filter(a => a.campaignAddress === campaignAddress);
       setData(filtered);
       setIsLoading(false);
     }, 800);
 
     return () => clearTimeout(timer);
-  }, [campaignId]);
+  }, [campaignAddress]);
 
   return { data, isLoading };
 }

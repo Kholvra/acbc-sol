@@ -12,24 +12,16 @@ export const invoiceRouter = createTRPCRouter({
   submit: protectedProcedure
     .input(submitInvoiceSchema)
     .mutation(async ({ ctx, input }) => {
-      // Get agreement with campaign info
+      // Get agreement to check status
       const agreement = await ctx.db.purchaseAgreement.findUnique({
         where: { id: input.agreementId },
-        include: { campaign: { select: { creatorId: true } } },
+        select: { status: true, totalAmount: true },
       });
 
       if (!agreement) {
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Agreement not found",
-        });
-      }
-
-      // Verify ownership
-      if (agreement.campaign.creatorId !== ctx.session.user.id) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Not your agreement",
         });
       }
 
@@ -88,7 +80,6 @@ export const invoiceRouter = createTRPCRouter({
           agreement: {
             include: {
               items: true,
-              campaign: { select: { title: true } },
             },
           },
           attachments: true,
@@ -111,7 +102,6 @@ export const invoiceRouter = createTRPCRouter({
           agreement: {
             include: {
               items: true,
-              campaign: { select: { creatorId: true, title: true } },
             },
           },
         },
@@ -121,17 +111,6 @@ export const invoiceRouter = createTRPCRouter({
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Invoice not found",
-        });
-      }
-
-      // Check access (owner or admin)
-      const isOwner = invoice.agreement.campaign.creatorId === ctx.session.user.id;
-      const isAdmin = ctx.session.user.role === "ADMIN";
-
-      if (!isOwner && !isAdmin) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Not your invoice",
         });
       }
 

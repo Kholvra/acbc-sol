@@ -30,31 +30,21 @@ interface NewAgreementPageProps {
 
 export default function NewAgreementPage({ params }: NewAgreementPageProps) {
   const router = useRouter();
-  const { id: campaignId } = use(params);
+  const { id: campaignAddress } = use(params);
 
   const utils = api.useUtils();
 
   const createMutation = api.agreement.create.useMutation({
     onSuccess: async () => {
       // Invalidate list cache before redirect
-      await utils.agreement.list.invalidate({ campaignId });
+      await utils.agreement.list.invalidate({ campaignAddress });
       toast.success('Agreement created successfully!');
-      router.push(`/campaigns/${campaignId}/agreements`);
+      router.push(`/campaigns/${campaignAddress}/agreements`);
     },
     onError: (error) => {
       if (isTRPCError(error)) {
-        const errorCode = error.data?.code;
         const message = error.data?.message ?? 'Failed to create agreement';
-
-        if (errorCode === 'FORBIDDEN') {
-          toast.error('You do not have permission to create agreements for this campaign.');
-        } else if (errorCode === 'NOT_FOUND') {
-          toast.error('Campaign not found.');
-        } else if (errorCode === 'BAD_REQUEST') {
-          toast.error(message);
-        } else {
-          toast.error(message);
-        }
+        toast.error(message);
       } else {
         toast.error('An unexpected error occurred. Please try again.');
       }
@@ -65,7 +55,7 @@ export default function NewAgreementPage({ params }: NewAgreementPageProps) {
     try {
       // Transform form data (strings) to API format (Dates)
       const transformedData = {
-        campaignId,
+        campaignAddress,
         vendorName: data.vendorName,
         vendorAddress: undefined, // Not in form, backend handles as optional
         category: data.category,
@@ -106,7 +96,7 @@ export default function NewAgreementPage({ params }: NewAgreementPageProps) {
 
         <div className="mb-24">
           <AgreementForm
-            campaignId={campaignId}
+            campaignAddress={campaignAddress}
             onSubmit={handleSubmit}
             onCancel={handleCancel}
           />

@@ -10,24 +10,6 @@ import {
   listPendingSchema,
 } from "~/server/api/schemas/agreement.schema";
 
-// Helper to check if user owns the agreement's campaign
-async function verifyAgreementOwnership(
-  prismaDb: { purchaseAgreement: { findUnique: (args: { where: { id: string }; include: { campaign: { select: { creatorId: true } } } }) => Promise<{ campaign: { creatorId: string } } | null> } },
-  agreementId: string,
-  userId: string
-): Promise<boolean> {
-  const agreement = await prismaDb.purchaseAgreement.findUnique({
-    where: { id: agreementId },
-    include: { campaign: { select: { creatorId: true } } },
-  });
-
-  if (!agreement) {
-    throw new TRPCError({ code: "NOT_FOUND", message: "Agreement not found" });
-  }
-
-  return agreement.campaign.creatorId === userId;
-}
-
 // Helper to calculate total from items
 function calculateTotal(
   items: Array<{ unitPrice: number; quantity: number }>
@@ -39,33 +21,13 @@ export const agreementRouter = createTRPCRouter({
   create: protectedProcedure
     .input(createAgreementSchema)
     .mutation(async ({ ctx, input }) => {
-      // Verify user owns the campaign
-      const campaign = await ctx.db.campaign.findUnique({
-        where: { id: input.campaignId },
-        select: { creatorId: true },
-      });
-
-      if (!campaign) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Campaign not found",
-        });
-      }
-
-      if (campaign.creatorId !== ctx.session.user.id) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Not your campaign",
-        });
-      }
-
       // Calculate total
       const totalAmount = calculateTotal(input.items);
 
       // Create agreement with items
       const agreement = await ctx.db.purchaseAgreement.create({
         data: {
-          campaignId: input.campaignId,
+          campaignAddress: input.campaignAddress,
           vendorName: input.vendorName,
           vendorAddress: input.vendorAddress,
           category: input.category,
@@ -94,26 +56,12 @@ export const agreementRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const { agreementId, ...data } = input;
 
-      // Verify ownership
-      const isOwner = await verifyAgreementOwnership(
-        ctx.db,
-        agreementId,
-        ctx.session.user.id
-      );
-      if (!isOwner) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Not your agreement",
-        });
-      }
-
       // Check status
       const existing = await ctx.db.purchaseAgreement.findUnique({
         where: { id: agreementId },
         select: { status: true },
       });
 
-      // Only DRAFT or REJECTED agreements can be edited.
       if (existing?.status !== "DRAFT" && existing?.status !== "REJECTED") {
         throw new TRPCError({
           code: "BAD_REQUEST",
@@ -152,16 +100,19 @@ export const agreementRouter = createTRPCRouter({
   submit: protectedProcedure
     .input(submitAgreementSchema)
     .mutation(async ({ ctx, input }) => {
-      // Verify ownership
-      const isOwner = await verifyAgreementOwnership(
-        ctx.db,
-        input.agreementId,
-        ctx.session.user.id
-      );
-      if (!isOwner) {
+      const existing = await ctx.db.purchaseAgreement.findUnique({
+        where: { id: input.agreementId },
+        select: { status: true },
+      });
+
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Agreement not found" });
+      }
+
+      if (existing.status !== "DRAFT" && existing.status !== "REJECTED") {
         throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Not your agreement",
+          code: "BAD_REQUEST",
+          message: `Cannot submit agreement in ${existing.status} status`,
         });
       }
 
@@ -180,30 +131,9 @@ export const agreementRouter = createTRPCRouter({
   list: protectedProcedure
     .input(listAgreementsSchema)
     .query(async ({ ctx, input }) => {
-      // Verify user has access to campaign
-      const campaign = await ctx.db.campaign.findUnique({
-        where: { id: input.campaignId },
-        select: { creatorId: true },
-      });
-
-      if (!campaign) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Campaign not found",
-        });
-      }
-
-      // Only campaign creator can see their agreements
-      if (campaign.creatorId !== ctx.session.user.id) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Not your campaign",
-        });
-      }
-
       const agreements = await ctx.db.purchaseAgreement.findMany({
         where: {
-          campaignId: input.campaignId,
+          campaignAddress: input.campaignAddress,
           ...(input.status && { status: input.status }),
         },
         include: { items: true, invoice: true },
@@ -221,7 +151,6 @@ export const agreementRouter = createTRPCRouter({
         include: {
           items: true,
           invoice: { include: { attachments: true } },
-          campaign: { select: { creatorId: true } },
         },
       });
 
@@ -229,17 +158,6 @@ export const agreementRouter = createTRPCRouter({
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Agreement not found",
-        });
-      }
-
-      // Check access (owner or admin)
-      const isOwner = agreement.campaign.creatorId === ctx.session.user.id;
-      const isAdmin = ctx.session.user.role === "ADMIN";
-
-      if (!isOwner && !isAdmin) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Not your agreement",
         });
       }
 
@@ -253,7 +171,6 @@ export const agreementRouter = createTRPCRouter({
         where: { status: "PENDING_APPROVAL" },
         include: {
           items: true,
-          campaign: { select: { title: true, creatorId: true } },
         },
         orderBy: { submittedAt: "asc" },
         take: input.limit,
@@ -271,10 +188,14 @@ export const agreementRouter = createTRPCRouter({
         select: { status: true },
       });
 
-      if (existing?.status !== "PENDING_APPROVAL") {
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Agreement not found" });
+      }
+
+      if (existing.status !== "PENDING_APPROVAL") {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Cannot approve agreement in ${existing?.status} status`,
+          message: `Cannot approve agreement in ${existing.status} status`,
         });
       }
 
@@ -299,10 +220,14 @@ export const agreementRouter = createTRPCRouter({
         select: { status: true },
       });
 
-      if (existing?.status !== "PENDING_APPROVAL") {
+      if (!existing) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Agreement not found" });
+      }
+
+      if (existing.status !== "PENDING_APPROVAL") {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Cannot reject agreement in ${existing?.status} status`,
+          message: `Cannot reject agreement in ${existing.status} status`,
         });
       }
 

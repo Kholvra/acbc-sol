@@ -16,23 +16,23 @@ interface AgreementsPageProps {
 
 export default function AgreementsPage({ params }: AgreementsPageProps) {
   const router = useRouter();
-  const { id: campaignId } = use(params);
+  const { id: campaignAddress } = use(params);
 
   const {
     data: agreements,
     isLoading,
     error,
   } = api.agreement.list.useQuery(
-    { campaignId },
+    { campaignAddress },
     {
-      enabled: !!campaignId,
+      enabled: !!campaignAddress,
       retry: 2,
       staleTime: 30 * 1000,
     }
   );
 
   const handleCreateNew = () => {
-    router.push(`/campaigns/${campaignId}/agreements/new`);
+    router.push(`/campaigns/${campaignAddress}/agreements/new`);
   };
 
   return (

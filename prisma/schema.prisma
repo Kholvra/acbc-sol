@@ -53,7 +53,6 @@ model Campaign {
   creator User @relation(fields: [creatorId], references: [id])
 
   items    CampaignItem[]
-  purchaseAgreements PurchaseAgreement[]
 }
 
 model CampaignItem {
@@ -73,8 +72,7 @@ model CampaignItem {
 
 model PurchaseAgreement {
   id              String          @id @default(cuid())
-  campaignId      String
-  campaign        Campaign        @relation(fields: [campaignId], references: [id])
+  campaignAddress String
 
   vendorName      String
   vendorAddress   String?
@@ -98,7 +96,7 @@ model PurchaseAgreement {
   items           AgreementItem[]
   invoice         Invoice?
 
-  @@index([campaignId])
+  @@index([campaignAddress])
   @@index([status])
   @@map("purchase_agreements")
 }

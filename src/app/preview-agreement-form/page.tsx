@@ -17,7 +17,7 @@ export default function PreviewAgreementFormPage() {
           </div>
           
           <AgreementForm
-            campaignId="preview-campaign-123"
+            campaignAddress="preview-campaign-123"
             onCancel={() => console.log('Cancelled')}
             onSubmit={async (data) => {
               console.log('Form submitted:', data);

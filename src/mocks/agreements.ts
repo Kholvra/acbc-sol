@@ -2,7 +2,7 @@ import type { AgreementFormData, AgreementWithMeta } from '~/components/agreemen
 
 export const mockAgreements: AgreementFormData[] = [
   {
-    campaignId: 'cmp_123',
+    campaignAddress: 'cmp_123',
     vendorName: 'Apotek K24',
     category: 'MEDICAL',
     items: [
@@ -24,7 +24,7 @@ export const mockAgreements: AgreementFormData[] = [
     paymentTerms: 'FULL_PAYMENT',
   },
   {
-    campaignId: 'cmp_123',
+    campaignAddress: 'cmp_123',
     vendorName: 'Toko Bangunan Jaya',
     category: 'CONSTRUCTION',
     items: [
@@ -50,7 +50,7 @@ export const mockAgreements: AgreementFormData[] = [
 export const mockPendingAgreements: AgreementWithMeta[] = [
   {
     id: 'agr_001',
-    campaignId: 'cmp_123',
+    campaignAddress: 'cmp_123',
     vendorName: 'Apotek K24',
     category: 'MEDICAL',
     items: [

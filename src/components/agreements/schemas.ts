@@ -36,7 +36,7 @@ export const agreementItemSchema = z.object({
 
 // base schema without refinements
 const _agreementFormBaseSchema = z.object({
-  campaignId: z.string().min(1, 'Campaign ID is required'),
+  campaignAddress: z.string().min(1, 'Campaign address is required'),
   vendorName: z.string().min(1, 'Vendor name is required'),
   category: expenseCategorySchema,
   items: z.array(agreementItemSchema).min(1, 'At least 1 item required'),

@@ -29,7 +29,7 @@ export const agreementItemSchema = z.object({
 
 // Create agreement
 export const createAgreementSchema = z.object({
-  campaignId: z.string(),
+  campaignAddress: z.string(),
   vendorName: z.string().min(1, "Vendor name is required"),
   vendorAddress: z.string().optional(),
   category: expenseCategorySchema,
@@ -70,7 +70,7 @@ export const rejectAgreementSchema = z.object({
 
 // List agreements
 export const listAgreementsSchema = z.object({
-  campaignId: z.string(),
+  campaignAddress: z.string(),
   status: agreementStatusSchema.optional(),
 });
 

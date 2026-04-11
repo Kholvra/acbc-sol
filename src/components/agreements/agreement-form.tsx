@@ -62,14 +62,14 @@ const scrollToFirstError = (errors: FieldErrors<AgreementFormData>) => {
 };
 
 interface AgreementFormProps {
-  campaignId: string;
+  campaignAddress: string;
   initialData?: Partial<AgreementFormData>;
   onSubmit?: (data: AgreementFormData) => Promise<void>;
   onCancel?: () => void;
 }
 
 const defaultFormValues = {
-  campaignId: '',
+  campaignAddress: '',
   vendorName: '',
   category: 'MEDICAL' as const,
   items: [{ itemName: '', specifications: '', unitPrice: 0, quantity: 1 }],
@@ -84,7 +84,7 @@ const steps = [
   { number: 3, label: 'Submit', id: 'submit' },
 ];
 
-export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: AgreementFormProps) {
+export function AgreementForm({ campaignAddress, initialData, onSubmit, onCancel }: AgreementFormProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -94,7 +94,7 @@ export function AgreementForm({ campaignId, initialData, onSubmit, onCancel }: A
     reValidateMode: 'onChange',
     defaultValues: {
       ...defaultFormValues,
-      campaignId,
+      campaignAddress,
       vendorName: initialData?.vendorName ?? '',
       category: initialData?.category ?? 'MEDICAL',
       items: initialData?.items ?? defaultFormValues.items,
