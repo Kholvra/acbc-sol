@@ -16,7 +16,7 @@ async function verifyAgreementOwnership(
   agreementId: string,
   userId: string
 ): Promise<boolean> {
-  const agreement = await db.purchaseAgreement.findUnique({
+  const agreement = await prismaDb.purchaseAgreement.findUnique({
     where: { id: agreementId },
     include: { campaign: { select: { creatorId: true } } },
   });
@@ -113,7 +113,8 @@ export const agreementRouter = createTRPCRouter({
         select: { status: true },
       });
 
-      if (existing?.status !== "DRAFT") {
+      // Only DRAFT or REJECTED agreements can be edited.
+      if (existing?.status !== "DRAFT" && existing?.status !== "REJECTED") {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: `Cannot update agreement in ${existing?.status} status`,
