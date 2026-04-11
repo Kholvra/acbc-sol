@@ -5,7 +5,8 @@ import { useAccount, useReadContract, useReadContracts, useWriteContract, useWai
 import TikTokLayout from '~/components/layout/tiktok-layout';
 import { FACTORY_ADDRESS, FACTORY_ABI, CAMPAIGN_ABI } from '~/constants/contracts';
 import { fetchJSONFromIPFS, unpinJSONFromIPFS } from '~/utils/pinata';
-import { Loader2, Trash2, Film, Clock } from 'lucide-react';
+import { Loader2, Trash2, Film, Clock, FolderOpen } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import CampaignCreationModal from '~/components/campaign/campaign-creation-modal';
 import { isCampaignExpired, getDaysLeft } from '~/utils/date';
@@ -25,6 +26,7 @@ type Campaign = {
 
 const MyActivityPage: React.FC = () => {
     const { address: userAddress } = useAccount();
+    const router = useRouter();
     const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('active');
     const [myCampaigns, setMyCampaigns] = useState<Campaign[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -213,10 +215,19 @@ const MyActivityPage: React.FC = () => {
                                         </div>
 
                                         {filter === 'active' && campaign.isActive && (
-                                             <button onClick={() => handleDelete(campaign)} disabled={isDeleting === campaign.address} className="mt-auto w-full bg-red-50 text-red-500 hover:bg-red-100 py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50">
-                                                 {isDeleting === campaign.address ? <Loader2 className="animate-spin" size={16}/> : <Trash2 size={16} />}
-                                                 Delete Campaign
-                                             </button>
+                                             <div className="mt-auto flex flex-col gap-2">
+                                                 <button
+                                                     onClick={() => router.push(`/campaigns/${campaign.address}/agreements`)}
+                                                     className="w-full bg-aid-green/10 text-aid-green hover:bg-aid-green/20 py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+                                                 >
+                                                     <FolderOpen size={16} />
+                                                     Manage Agreements
+                                                 </button>
+                                                 <button onClick={() => handleDelete(campaign)} disabled={isDeleting === campaign.address} className="w-full bg-red-50 text-red-500 hover:bg-red-100 py-2 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50">
+                                                     {isDeleting === campaign.address ? <Loader2 className="animate-spin" size={16}/> : <Trash2 size={16} />}
+                                                     Delete Campaign
+                                                 </button>
+                                             </div>
                                         )}
                                     </div>
                                 ))}
