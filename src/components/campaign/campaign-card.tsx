@@ -210,8 +210,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
     <div className="relative h-screen md:h-full w-full bg-black md:bg-white md:rounded-3xl overflow-hidden snap-start flex-shrink-0 shadow-lg md:border border-aid-green/10">
         
         {/* Desktop Donate Button - Right Side */}
-        {!isMobile && (
-            <div className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-50 flex-col gap-2">
+        <div className={`hidden md:flex absolute right-4 md:bottom-8 z-50 flex-col gap-2 transition-opacity duration-300 ${isExpanded ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
                 <button
                     onClick={(e) => {
                         e.stopPropagation();
@@ -230,7 +229,6 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
                     )}
                 </button>
             </div>
-        )}
 
         <SwipeGestureWrapper 
             onSwipeRight={executeQuickDonate}
