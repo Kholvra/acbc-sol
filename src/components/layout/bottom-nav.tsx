@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 
 interface BottomNavProps {
     onOpenCreate?: () => void;
-    userRole?: 'DONATUR' | 'CAMPAIGNER' | null;
+    userRole?: 'DONATUR' | 'CAMPAIGNER' | 'ADMIN' | null;
 }
 
 const BottomNav: React.FC<BottomNavProps> = ({ onOpenCreate, userRole }) => {
@@ -16,7 +16,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ onOpenCreate, userRole }) => {
   const navItems = [
     { label: "Home", icon: Home, path: "/dashboard", active: pathname === "/dashboard" || pathname === "/" },
     { label: "Live", icon: Video, path: (pathname === "/live" || pathname.startsWith('/live/')) ? pathname : "/live", active: pathname === "/live" || pathname.startsWith('/live/') },
-    ...(userRole === 'CAMPAIGNER' ? [{ label: "Create", icon: PlusSquare, path: null, active: false, isAction: true }] : []),
+    ...(userRole === 'CAMPAIGNER' || userRole === 'ADMIN' ? [{ label: "Create", icon: PlusSquare, path: null, active: false, isAction: true }] : []),
     { label: "Explore", icon: Compass, path: "/explore", active: pathname === "/explore" },
     { label: "Profile", icon: User, path: "/profile", active: pathname === "/profile" },
   ];
