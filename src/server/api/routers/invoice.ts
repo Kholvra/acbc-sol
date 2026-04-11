@@ -141,6 +141,18 @@ export const invoiceRouter = createTRPCRouter({
   verify: adminProcedure
     .input(verifyInvoiceSchema)
     .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.invoice.findUnique({
+        where: { id: input.invoiceId },
+        select: { status: true },
+      });
+
+      if (existing?.status !== "PENDING_VERIFICATION") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Cannot verify invoice in ${existing?.status} status`,
+        });
+      }
+
       const invoice = await ctx.db.invoice.update({
         where: { id: input.invoiceId },
         data: {
@@ -158,6 +170,18 @@ export const invoiceRouter = createTRPCRouter({
   reject: adminProcedure
     .input(rejectInvoiceSchema)
     .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.invoice.findUnique({
+        where: { id: input.invoiceId },
+        select: { status: true },
+      });
+
+      if (existing?.status !== "PENDING_VERIFICATION") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Cannot reject invoice in ${existing?.status} status`,
+        });
+      }
+
       const invoice = await ctx.db.invoice.update({
         where: { id: input.invoiceId },
         data: {

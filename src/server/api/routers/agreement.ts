@@ -266,6 +266,18 @@ export const agreementRouter = createTRPCRouter({
   approve: adminProcedure
     .input(approveAgreementSchema)
     .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.purchaseAgreement.findUnique({
+        where: { id: input.agreementId },
+        select: { status: true },
+      });
+
+      if (existing?.status !== "PENDING_APPROVAL") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Cannot approve agreement in ${existing?.status} status`,
+        });
+      }
+
       const agreement = await ctx.db.purchaseAgreement.update({
         where: { id: input.agreementId },
         data: {
@@ -282,6 +294,18 @@ export const agreementRouter = createTRPCRouter({
   reject: adminProcedure
     .input(rejectAgreementSchema)
     .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.purchaseAgreement.findUnique({
+        where: { id: input.agreementId },
+        select: { status: true },
+      });
+
+      if (existing?.status !== "PENDING_APPROVAL") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: `Cannot reject agreement in ${existing?.status} status`,
+        });
+      }
+
       const agreement = await ctx.db.purchaseAgreement.update({
         where: { id: input.agreementId },
         data: {
