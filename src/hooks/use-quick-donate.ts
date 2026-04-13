@@ -1,9 +1,15 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
-import { useWriteContract, useWaitForTransactionReceipt, useAccount, useReadContract } from 'wagmi';
+import { 
+  useWriteContract, 
+  useWaitForTransactionReceipt, 
+  useAccount, 
+  useReadContract,
+  useSendCalls
+} from 'wagmi';
 import { useQueryClient } from '@tanstack/react-query';
-import { parseEther } from 'viem';
+import { parseEther, encodeFunctionData } from 'viem';
 import { toast } from 'sonner';
 import { CAMPAIGN_ABI, IDRX_ABI, IDRX_ADDRESS } from '~/constants/contracts';
 import { QUICK_DONATE_AMOUNT } from '~/constants/donation';
@@ -19,8 +25,9 @@ export function useQuickDonate({
 }: UseQuickDonateProps) {
   const { address: userAddress } = useAccount();
   const queryClient = useQueryClient();
-  const [step, setStep] = useState<'idle' | 'approving' | 'donating'>('idle');
+  const [step, setStep] = useState<'idle' | 'approving' | 'donating' | 'batching'>('idle');
 
+  // Standard separate contract writes (for EOA/legacy)
   const { 
     writeContract: approveContract,
     data: approveHash,
@@ -33,10 +40,19 @@ export function useQuickDonate({
     error: donateError
   } = useWriteContract();
 
+  // EIP-5792 Batch Write using useSendCalls (Non-deprecated replacement)
+  const {
+    sendCalls: batchSend,
+    data: batchId,
+    error: batchError,
+    isPending: isBatchPending
+  } = useSendCalls();
+
   const {
     isSuccess: approveSuccess
   } = useWaitForTransactionReceipt({ hash: approveHash });
 
+  // Tracking standard donation success
   const {
     isSuccess: donateSuccess
   } = useWaitForTransactionReceipt({ hash: donateHash });
@@ -58,7 +74,7 @@ export function useQuickDonate({
     const donateAmount = parseEther(QUICK_DONATE_AMOUNT);
     const approvalAmount = parseEther('10000'); // Set limit to 10k for smoother UX
 
-    // If allowance is already enough (>= 1k), just donate
+    // 1. If allowance is already enough, just donate (1 step)
     if (allowance !== undefined && allowance >= donateAmount) {
       setStep('donating');
       donateContract({
@@ -70,17 +86,69 @@ export function useQuickDonate({
       return;
     }
 
-    // Otherwise, request approval for 10k
-    setStep('approving');
-    approveContract({
-      address: IDRX_ADDRESS,
-      abi: IDRX_ABI,
-      functionName: 'approve',
-      args: [campaignAddress, approvalAmount],
-    });
-  }, [approveContract, campaignAddress, userAddress, allowance, donateContract]);
+    // 2. If allowance is NOT enough, try ATOMIC BATCHING (EIP-5792)
+    // We use useSendCalls with encoded data for Smart Wallets
+    try {
+      setStep('batching');
+      
+      const approveData = encodeFunctionData({
+        abi: IDRX_ABI,
+        functionName: 'approve',
+        args: [campaignAddress, approvalAmount],
+      });
 
-  // Handle Approval Success
+      const donateData = encodeFunctionData({
+        abi: CAMPAIGN_ABI,
+        functionName: 'donate',
+        args: [donateAmount],
+      });
+
+      batchSend({
+        calls: [
+          {
+            to: IDRX_ADDRESS,
+            data: approveData,
+          },
+          {
+            to: campaignAddress,
+            data: donateData,
+          }
+        ]
+      });
+      return;
+    } catch (e) {
+      // Fallback for wallets that don't support batching
+      console.log('Batching not supported, falling back to separate transactions', e);
+      setStep('approving');
+      approveContract({
+        address: IDRX_ADDRESS,
+        abi: IDRX_ABI,
+        functionName: 'approve',
+        args: [campaignAddress, approvalAmount],
+      });
+    }
+  }, [approveContract, campaignAddress, userAddress, allowance, donateContract, batchSend]);
+
+  // Handle Batch Success (since batchId != tx hash)
+  useEffect(() => {
+    if (batchId && step === 'batching') {
+      toast.success('Donasi Berhasil (Batch)! 🚀');
+      
+      void queryClient.invalidateQueries({
+        queryKey: ['contracts']
+      });
+
+      const timer = setTimeout(() => {
+        void refetchAllowance();
+        onSuccess?.();
+        setStep('idle');
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [batchId, step, queryClient, refetchAllowance, onSuccess]);
+
+  // Handle Approval Success (Legacy Flow)
   useEffect(() => {
     if (approveSuccess && step === 'approving') {
       toast.success('Izin 10k Berhasil! 🎉', {
@@ -91,17 +159,15 @@ export function useQuickDonate({
     }
   }, [approveSuccess, step, refetchAllowance]);
 
-  // Handle Donation Success
+  // Handle Donation Success (Standard Flow)
   useEffect(() => {
-    if (donateSuccess) {
+    if (donateSuccess && step === 'donating') {
       toast.success(`Berhasil Donasi ${QUICK_DONATE_AMOUNT} IDRX! 💝`);
 
-      // Invalidate queries to update progress bars immediately
       void queryClient.invalidateQueries({
         queryKey: ['contracts']
       });
 
-      // Delay callback by 2 seconds to allow node synchronization
       const timer = setTimeout(() => {
         void refetchAllowance();
         onSuccess?.();
@@ -110,25 +176,23 @@ export function useQuickDonate({
 
       return () => clearTimeout(timer);
     }
-  }, [donateSuccess, onSuccess, refetchAllowance, queryClient]);
+  }, [donateSuccess, step, onSuccess, refetchAllowance, queryClient]);
 
   // Handle errors
   useEffect(() => {
-    if (approveError) {
-      toast.error('Gagal memberikan izin. Coba lagi ya.');
+    if (approveError || batchError || donateError) {
+      const error = approveError || batchError || donateError;
+      console.error('Quick Donate Error:', error);
+      toast.error('Gagal donasi. Coba lagi ya.');
       setStep('idle');
     }
-    if (donateError) {
-      toast.error('Donasi gagal. Pastikan saldo IDRX cukup.');
-      setStep('idle');
-    }
-  }, [approveError, donateError]);
+  }, [approveError, batchError, donateError]);
 
   return {
     executeQuickDonate,
-    isProcessing: step !== 'idle',
+    isProcessing: step !== 'idle' || isBatchPending,
     isApproving: step === 'approving',
-    isDonating: step === 'donating',
-    isSuccess: donateSuccess,
+    isDonating: step === 'donating' || step === 'batching',
+    isSuccess: donateSuccess || !!batchId,
   };
 }
