@@ -121,6 +121,8 @@ export const authConfig = {
 
   session: {
     strategy: "jwt",
+    maxAge: 24 * 60 * 60, // 24 hours
+    updateAge: 60 * 60, // refresh every hour if active
   },
 
   pages: {
@@ -128,12 +130,23 @@ export const authConfig = {
   },
 
   callbacks: {
-    jwt({ token, user }) {
+    jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
         token.address = user.address ?? '';
         token.role = user.role ?? null;
       }
+
+      // Refresh token data when session is updated
+      if (trigger === "update" && session) {
+        const updateSession = session as { user?: { id?: string; address?: string; role?: string | null } };
+        if (updateSession.user) {
+          token.id = updateSession.user.id ?? token.id;
+          token.address = updateSession.user.address ?? token.address ?? '';
+          token.role = updateSession.user.role ?? token.role ?? null;
+        }
+      }
+
       return token;
     },
 
