@@ -4,8 +4,6 @@ import React, { useState, useEffect } from 'react';
 import CampaignCreationModal from '~/components/campaign/campaign-creation-modal';
 import CampaignCard from '~/components/campaign/campaign-card';
 import { useAccount, useReadContract, useReadContracts } from 'wagmi';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { FACTORY_ADDRESS, FACTORY_ABI, CAMPAIGN_ABI } from '~/constants/contracts';
 import { Loader2, Compass } from 'lucide-react';
 import TikTokLayout from '~/components/layout/tiktok-layout';
@@ -15,17 +13,16 @@ import { isCampaignExpired } from '~/utils/date';
 import { api } from '~/trpc/react';
 
 const REFETCH_INTERVAL_MS = 5000;
-const AUTH_REDIRECT_DELAY_MS = 500;
 
 const DashboardPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { isConnected, isConnecting } = useAccount();
-  const { status } = useSession();
-  const router = useRouter();
 
-  // check if user exists in DB
-  const { data: profile, isLoading: isProfileLoading } = api.user.getProfile.useQuery(undefined, {
-    enabled: status === 'authenticated',
+  // Layout guarantees auth; profile query always enabled
+  const {
+    data: profile,
+    isLoading: isProfileLoading,
+  } = api.user.getProfile.useQuery(undefined, {
     retry: false,
   });
 
@@ -101,18 +98,8 @@ const DashboardPage = () => {
      return true;
   });
 
-  useEffect(() => {
-    // debounce redirect to avoid race conditions during session transitions
-    if (status === 'unauthenticated') {
-      const timer = setTimeout(() => {
-        router.push('/sign-in');
-      }, AUTH_REDIRECT_DELAY_MS);
-      return () => clearTimeout(timer);
-    }
-  }, [status, router, profile]);
-
-  // show loading while connecting, session loading, or profile loading
-  if (isConnecting || status === 'loading' || isProfileLoading) {
+  // show loading while connecting wallet or fetching profile
+  if (isConnecting || isProfileLoading) {
       return (
         <div className="h-screen w-full flex items-center justify-center bg-aid-offwhite">
             <Loader2 className="animate-spin text-aid-green" size={48} />
@@ -120,15 +107,15 @@ const DashboardPage = () => {
       );
   }
 
-  // redirect to sign-in if unauthenticated or session exists but no profile in DB
-  if (status === 'unauthenticated' || (status === 'authenticated' && profile === null)) {
-      router.push('/sign-in');
-      return null;
-  }
-
-  // don't render if not authenticated - avoid redirect loops
-  if (status !== 'authenticated' || !isConnected) {
-      return null;
+  // Wallet must be connected for Web3 interactions
+  if (!isConnected) {
+      return (
+        <div className="h-screen w-full flex items-center justify-center bg-aid-offwhite">
+            <div className="text-center">
+                <p className="font-heading font-bold text-aid-dark/60">Connect wallet to continue</p>
+            </div>
+        </div>
+      );
   }
 
   return (

@@ -12,7 +12,7 @@ export const RoleOnboardingWrapper = () => {
   const { status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const { data: profile, isLoading } = api.user.getProfile.useQuery(undefined, {
+  const { data: profile, isLoading, isError: hasProfileError } = api.user.getProfile.useQuery(undefined, {
     enabled: status === 'authenticated',
   });
 
@@ -22,7 +22,7 @@ export const RoleOnboardingWrapper = () => {
   // auth guard & role enforcement
   useEffect(() => {
     // unauthenticated - redirect to sign-in
-    if (status === 'unauthenticated') {
+    if (status === 'unauthenticated' || hasProfileError) {
       router.push('/sign-in');
       return;
     }
@@ -52,7 +52,7 @@ export const RoleOnboardingWrapper = () => {
     } else {
       setShowModal(true);
     }
-  }, [status, isLoading, profile, pathname, router, isCompleting]);
+  }, [status, isLoading, hasProfileError, profile, pathname, router, isCompleting]);
 
   const handleSuccess = () => {
     setIsCompleting(true);
@@ -61,7 +61,7 @@ export const RoleOnboardingWrapper = () => {
 
   // don't render until session is loaded and authenticated
   // also wait for profile query to complete
-  if (status !== 'authenticated' || isLoading) {
+  if (status !== 'authenticated' || isLoading || hasProfileError) {
     return null;
   }
 
