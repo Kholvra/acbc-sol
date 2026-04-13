@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAccount, useSignMessage } from 'wagmi';
-import { signIn, useSession } from 'next-auth/react';
+import { signIn, signOut, useSession } from 'next-auth/react';
 import WalletWrapper from '~/components/providers/wallet-wrapper';
 import Button from '~/components/ui/button';
 import { Radio } from 'lucide-react';
@@ -31,7 +31,11 @@ const SignInPage: React.FC = () => {
   const utils = api.useUtils();
 
   // check if user exists in DB
-  const { data: profile, isLoading: isProfileLoading } = api.user.getProfile.useQuery(undefined, {
+  const {
+    data: profile,
+    isLoading: isProfileLoading,
+    isError: hasProfileError,
+  } = api.user.getProfile.useQuery(undefined, {
     enabled: status === 'authenticated' && isConnected,
     retry: false,
     staleTime: 0, // always refetch when enabled
@@ -105,6 +109,15 @@ const SignInPage: React.FC = () => {
       router.push('/dashboard');
     }
   }, [status, profile, router]);
+
+  useEffect(() => {
+    if (status !== 'authenticated' || isProfileLoading) return;
+    if (profile !== null && !hasProfileError) return;
+
+    void signOut({ redirect: false }).then(() => {
+      router.refresh();
+    });
+  }, [status, profile, hasProfileError, isProfileLoading, router]);
 
   // show loading only during wallet connection or profile check
   if (isConnecting || (status === 'authenticated' && isProfileLoading)) {

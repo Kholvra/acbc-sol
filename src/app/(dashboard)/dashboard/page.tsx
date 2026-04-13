@@ -24,7 +24,11 @@ const DashboardPage = () => {
   const router = useRouter();
 
   // check if user exists in DB
-  const { data: profile, isLoading: isProfileLoading } = api.user.getProfile.useQuery(undefined, {
+  const {
+    data: profile,
+    isLoading: isProfileLoading,
+    isError: hasProfileError,
+  } = api.user.getProfile.useQuery(undefined, {
     enabled: status === 'authenticated',
     retry: false,
   });
@@ -103,13 +107,13 @@ const DashboardPage = () => {
 
   useEffect(() => {
     // debounce redirect to avoid race conditions during session transitions
-    if (status === 'unauthenticated') {
+    if (status === 'unauthenticated' || hasProfileError) {
       const timer = setTimeout(() => {
         router.push('/sign-in');
       }, AUTH_REDIRECT_DELAY_MS);
       return () => clearTimeout(timer);
     }
-  }, [status, router, profile]);
+  }, [status, router, hasProfileError]);
 
   // show loading while connecting, session loading, or profile loading
   if (isConnecting || status === 'loading' || isProfileLoading) {
@@ -121,7 +125,11 @@ const DashboardPage = () => {
   }
 
   // redirect to sign-in if unauthenticated or session exists but no profile in DB
-  if (status === 'unauthenticated' || (status === 'authenticated' && profile === null)) {
+  if (
+    status === 'unauthenticated' ||
+    hasProfileError ||
+    (status === 'authenticated' && profile === null)
+  ) {
       router.push('/sign-in');
       return null;
   }
