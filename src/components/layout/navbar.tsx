@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const { isConnected } = useAccount();
   const pathname = usePathname();
 
@@ -22,6 +23,10 @@ const Navbar: React.FC = () => {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    setIsMounted(true);
   }, []);
 
   const navVariants = {
@@ -96,15 +101,15 @@ const Navbar: React.FC = () => {
                      <Link href="/sign-in" className="px-6 py-2.5 bg-aid-dark text-white font-bold rounded-full hover:bg-aid-green transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
                        Login
                      </Link>
+                ) : isLoginPage ? null : !isMounted ? (
+                    <div className="h-10" />
                 ) : (
                     isConnected ? (
                         <WalletWrapper />
                     ) : (
-                        !isLoginPage && (
-                            <Link href="/sign-in" className="px-6 py-2.5 bg-aid-dark text-white font-bold rounded-full hover:bg-aid-green transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
-                            Login
-                            </Link>
-                        )
+                        <Link href="/sign-in" className="px-6 py-2.5 bg-aid-dark text-white font-bold rounded-full hover:bg-aid-green transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                        Login
+                        </Link>
                     )
                 )}
             </div>
@@ -143,15 +148,15 @@ const Navbar: React.FC = () => {
                              <Link href="/sign-in" onClick={() => setIsMobileMenuOpen(false)} className="w-full text-center px-6 py-3 bg-aid-dark text-white font-bold rounded-xl hover:bg-aid-green transition-all">
                                 Login
                              </Link>
+                        ) : isLoginPage ? null : !isMounted ? (
+                            <div className="h-12 w-full" />
                         ) : (
                             isConnected ? (
                                 <WalletWrapper className="w-full justify-center" />
                             ) : (
-                                !isLoginPage && (
-                                    <Link href="/sign-in" onClick={() => setIsMobileMenuOpen(false)} className="w-full text-center px-6 py-3 bg-aid-dark text-white font-bold rounded-xl hover:bg-aid-green transition-all">
-                                    Login
-                                    </Link>
-                                )
+                                <Link href="/sign-in" onClick={() => setIsMobileMenuOpen(false)} className="w-full text-center px-6 py-3 bg-aid-dark text-white font-bold rounded-xl hover:bg-aid-green transition-all">
+                                Login
+                                </Link>
                             )
                         )}
                     </div>

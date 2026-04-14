@@ -26,6 +26,8 @@ const SignInPage: React.FC = () => {
   const { status } = useSession();
   const router = useRouter();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const hasRedirectedToDashboard = useRef(false);
 
   // tRPC utils for invalidation
   const utils = api.useUtils();
@@ -43,6 +45,10 @@ const SignInPage: React.FC = () => {
 
   // track which address we've already attempted auth for
   const lastAuthAttemptAddress = useRef<string | null>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleSignIn = useCallback(async (walletAddress: string) => {
     // skip if no address or already authenticated with profile
@@ -73,11 +79,7 @@ const SignInPage: React.FC = () => {
       // invalidate profile query to ensure fresh data
       await utils.user.getProfile.invalidate();
 
-      router.push('/dashboard');
-      router.refresh();
-
     } catch (error) {
-      console.error('Sign in error:', error);
       const message = error instanceof Error ? error.message : 'Authentication failed';
       
       if (message.includes('User rejected')) {
@@ -91,7 +93,6 @@ const SignInPage: React.FC = () => {
     }
   }, [signMessageAsync, router, status, profile, utils]);
 
-  // auto-authenticate when wallet connects
   useEffect(() => {
     if (isConnected && address && !isAuthenticating && status === 'unauthenticated' && lastAuthAttemptAddress.current !== address) {
       lastAuthAttemptAddress.current = address;
@@ -105,8 +106,17 @@ const SignInPage: React.FC = () => {
 
   // redirect to dashboard if authenticated and profile exists
   useEffect(() => {
+    if (status !== 'authenticated') {
+      hasRedirectedToDashboard.current = false;
+    }
+  }, [status]);
+
+  useEffect(() => {
     if (status === 'authenticated' && profile) {
-      router.push('/dashboard');
+      if (hasRedirectedToDashboard.current) return;
+      hasRedirectedToDashboard.current = true;
+
+      router.replace('/dashboard');
     }
   }, [status, profile, router]);
 
@@ -119,8 +129,8 @@ const SignInPage: React.FC = () => {
     });
   }, [status, profile, hasProfileError, isProfileLoading, router]);
 
-  // show loading only during wallet connection or profile check
-  if (isConnecting || (status === 'authenticated' && isProfileLoading)) {
+  // Render a stable fallback until the client has mounted to avoid wallet/session hydration mismatches.
+  if (!isMounted || status === 'loading' || isConnecting || (status === 'authenticated' && isProfileLoading)) {
     return (
       <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center bg-white px-4" data-ock-theme="custom">
         <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl border border-aid-dark/5 text-center">
@@ -131,10 +141,12 @@ const SignInPage: React.FC = () => {
           </div>
 
           <h1 className="text-3xl font-heading font-black text-aid-dark mb-2">
-            {isConnecting ? 'Connecting...' : 'Loading...'}
+            {!isMounted || status === 'loading' ? 'Loading...' : isConnecting ? 'Connecting...' : 'Loading...'}
           </h1>
           <p className="text-gray-500 mb-8">
-            {isConnecting
+            {!isMounted || status === 'loading'
+              ? 'Please wait while we prepare your session'
+              : isConnecting
               ? 'Please approve the connection in your wallet'
               : 'Please wait while we load your profile'}
           </p>
