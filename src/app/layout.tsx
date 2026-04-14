@@ -8,7 +8,10 @@ import { TRPCReactProvider } from "~/trpc/react";
 export const metadata: Metadata = {
   title: "AidBeacon | Decentralized Disaster Relief",
   description: "Transparent crowdfunding on Base for real-time aid and relief missions.",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  icons: [
+    { rel: "icon", url: "/images/logo-aidbeacon.png", type: "image/png", sizes: "32x32" },
+    { rel: "apple-touch-icon", url: "/images/logo-aidbeacon.png" },
+  ],
 };
 
 export default function RootLayout({
