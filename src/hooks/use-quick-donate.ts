@@ -180,8 +180,8 @@ export function useQuickDonate({
 
   // Handle errors
   useEffect(() => {
-    if (approveError || batchError || donateError) {
-      const error = approveError || batchError || donateError;
+    if (approveError ?? batchError ?? donateError) {
+      const error = approveError ?? batchError ?? donateError;
       console.error('Quick Donate Error:', error);
       toast.error('Gagal donasi. Coba lagi ya.');
       setStep('idle');
