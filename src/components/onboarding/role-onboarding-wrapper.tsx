@@ -40,6 +40,12 @@ export const RoleOnboardingWrapper = () => {
     if (!profile) return;
 
     // always show modal as role switcher
+    // but don't reopen if user just completed selection
+    if (isCompleting) {
+      setShowModal(false);
+      return;
+    }
+
     const isRestricted = RESTRICTED_ROUTES.some(route => pathname.startsWith(route));
     if (isRestricted && !profile.hasRole) {
       router.push('/dashboard');
