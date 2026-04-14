@@ -11,9 +11,10 @@ import { useSession } from 'next-auth/react';
 interface RoleSelectionModalProps {
   isOpen: boolean;
   onSuccess: () => void;
+  currentRole?: 'DONATUR' | 'CAMPAIGNER' | 'ADMIN' | null;
 }
 
-export const RoleSelectionModal = ({ isOpen, onSuccess }: RoleSelectionModalProps) => {
+export const RoleSelectionModal = ({ isOpen, onSuccess, currentRole }: RoleSelectionModalProps) => {
   const [showKycConfirm, setShowKycConfirm] = useState(false);
   const { update: updateSession } = useSession();
   const router = useRouter();
@@ -94,12 +95,12 @@ export const RoleSelectionModal = ({ isOpen, onSuccess }: RoleSelectionModalProp
         {/* Header */}
         <div className="bg-gradient-to-r from-aid-green/20 to-aid-primary/20 p-6 relative">
           <h2 className="text-2xl font-heading font-black text-aid-dark text-center">
-            {showKycConfirm ? "Identity Verification" : "Choose Your Path"}
+            {showKycConfirm ? "Identity Verification" : "Switch Your Path"}
           </h2>
           <p className="text-center text-gray-600 text-sm mt-1 font-medium">
-            {showKycConfirm 
-              ? "Required for Campaigners" 
-              : "Select how you want to participate in AidBeacon"}
+            {showKycConfirm
+              ? "Required for Campaigners"
+              : "Choose how you want to participate in AidBeacon"}
           </p>
         </div>
 
@@ -110,14 +111,27 @@ export const RoleSelectionModal = ({ isOpen, onSuccess }: RoleSelectionModalProp
               {/* Donatur Option */}
               <button
                 onClick={() => handleRoleSelect('DONATUR')}
-                className="w-full text-left p-5 rounded-2xl border-2 border-gray-100 hover:border-aid-green/50 hover:bg-aid-green/5 transition-all group relative overflow-hidden"
+                className={`w-full text-left p-5 rounded-2xl border-2 transition-all group relative overflow-hidden ${
+                  currentRole === 'DONATUR'
+                    ? 'border-aid-green bg-aid-green/5'
+                    : 'border-gray-100 hover:border-aid-green/50 hover:bg-aid-green/5'
+                }`}
               >
                 <div className="flex items-start gap-4 relative z-10">
-                  <div className="w-12 h-12 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform ${
+                    currentRole === 'DONATUR'
+                      ? 'bg-aid-green text-white scale-110'
+                      : 'bg-blue-50 text-blue-500 group-hover:scale-110'
+                  }`}>
                     <Users size={24} />
                   </div>
                   <div>
-                    <h3 className="font-heading font-bold text-lg text-aid-dark mb-1">Donor (Donatur)</h3>
+                    <h3 className="font-heading font-bold text-lg text-aid-dark mb-1">
+                      Donor (Donatur)
+                      {currentRole === 'DONATUR' && (
+                        <span className="ml-2 text-xs font-bold text-aid-green uppercase tracking-wider">Current</span>
+                      )}
+                    </h3>
                     <p className="text-sm text-gray-500 leading-relaxed">
                       Support existing campaigns by donating. Browse and contribute to causes you care about across Indonesia.
                     </p>
@@ -128,14 +142,27 @@ export const RoleSelectionModal = ({ isOpen, onSuccess }: RoleSelectionModalProp
               {/* Campaigner Option */}
               <button
                 onClick={() => handleRoleSelect('CAMPAIGNER')}
-                className="w-full text-left p-5 rounded-2xl border-2 border-gray-100 hover:border-aid-green/50 hover:bg-aid-green/5 transition-all group relative overflow-hidden"
+                className={`w-full text-left p-5 rounded-2xl border-2 transition-all group relative overflow-hidden ${
+                  currentRole === 'CAMPAIGNER'
+                    ? 'border-aid-green bg-aid-green/5'
+                    : 'border-gray-100 hover:border-aid-green/50 hover:bg-aid-green/5'
+                }`}
               >
                 <div className="flex items-start gap-4 relative z-10">
-                  <div className="w-12 h-12 bg-orange-50 text-orange-500 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 transition-transform ${
+                    currentRole === 'CAMPAIGNER'
+                      ? 'bg-aid-green text-white scale-110'
+                      : 'bg-orange-50 text-orange-500 group-hover:scale-110'
+                  }`}>
                     <Megaphone size={24} />
                   </div>
                   <div>
-                    <h3 className="font-heading font-bold text-lg text-aid-dark mb-1">Campaigner</h3>
+                    <h3 className="font-heading font-bold text-lg text-aid-dark mb-1">
+                      Campaigner
+                      {currentRole === 'CAMPAIGNER' && (
+                        <span className="ml-2 text-xs font-bold text-aid-green uppercase tracking-wider">Current</span>
+                      )}
+                    </h3>
                     <p className="text-sm text-gray-500 leading-relaxed">
                       Create and manage fundraising campaigns. You can raise funds for relief efforts. <span className="text-orange-500 font-bold text-xs uppercase tracking-wider ml-1">Requires KYC</span>
                     </p>
