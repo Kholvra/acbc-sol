@@ -12,9 +12,10 @@ interface RoleSelectionModalProps {
   isOpen: boolean;
   onSuccess: () => void;
   currentRole?: 'DONATUR' | 'CAMPAIGNER' | 'ADMIN' | null;
+  hasKyc?: boolean;
 }
 
-export const RoleSelectionModal = ({ isOpen, onSuccess, currentRole }: RoleSelectionModalProps) => {
+export const RoleSelectionModal = ({ isOpen, onSuccess, currentRole, hasKyc }: RoleSelectionModalProps) => {
   const [showKycConfirm, setShowKycConfirm] = useState(false);
   const { update: updateSession } = useSession();
   const router = useRouter();
@@ -79,7 +80,12 @@ export const RoleSelectionModal = ({ isOpen, onSuccess, currentRole }: RoleSelec
 
   const handleRoleSelect = (role: 'DONATUR' | 'CAMPAIGNER') => {
     if (role === 'CAMPAIGNER') {
-      setShowKycConfirm(true);
+      // Skip KYC confirmation if user already has verified KYC
+      if (hasKyc) {
+        handleConfirmRole('CAMPAIGNER');
+      } else {
+        setShowKycConfirm(true);
+      }
     } else {
       handleConfirmRole(role);
     }

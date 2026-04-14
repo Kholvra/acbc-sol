@@ -70,6 +70,7 @@ export const RoleOnboardingWrapper = () => {
       isOpen={showModal}
       onSuccess={handleSuccess}
       currentRole={profile?.role ?? null}
+      hasKyc={profile?.hasKyc ?? false}
     />
   );
 };
