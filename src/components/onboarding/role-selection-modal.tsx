@@ -20,18 +20,45 @@ export const RoleSelectionModal = ({ isOpen, onSuccess }: RoleSelectionModalProp
   const utils = api.useUtils();
 
   const updateProfileMutation = api.user.updateProfile.useMutation({
+    onMutate: async (newData) => {
+      // Cancel outgoing refetches so they don't overwrite optimistic update
+      await utils.user.getProfile.cancel();
+
+      // Snapshot current cache value for rollback
+      const previous = utils.user.getProfile.getData();
+
+      // Optimistically update cache immediately
+      utils.user.getProfile.setData(undefined, {
+        hasRole: true,
+        role: newData.role,
+        hasKyc: previous?.hasKyc ?? false,
+        kycStatus: previous?.kycStatus ?? null,
+      });
+
+      // Return context for potential rollback
+      return { previous };
+    },
+    onError: (error, _newData, context) => {
+      // Rollback to previous value on error
+      if (context?.previous) {
+        utils.user.getProfile.setData(undefined, context.previous);
+      }
+      toast.error(error.message || "Failed to update profile.");
+    },
     onSuccess: async (data) => {
       toast.success(`Role selected as ${data.role}`);
-      
+
+      onSuccess();
+
+      // Update session with new role
       await updateSession({
         user: {
           role: data.role,
         },
       });
 
+      // Invalidate to sync with server (cache already has correct value)
       await utils.user.getProfile.invalidate();
-
-      onSuccess();
 
       if (data.role === 'CAMPAIGNER') {
         router.push('/kyc');
@@ -39,9 +66,6 @@ export const RoleSelectionModal = ({ isOpen, onSuccess }: RoleSelectionModalProp
         router.push('/dashboard');
       }
     },
-    onError: (error) => {
-      toast.error(error.message || "Failed to update profile.");
-    }
   });
 
   if (!isOpen) return null;
