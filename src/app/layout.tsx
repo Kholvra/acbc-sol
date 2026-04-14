@@ -2,7 +2,10 @@ import "@coinbase/onchainkit/styles.css";
 import "~/styles/globals.css";
 
 import { type Metadata } from "next";
+import { headers } from "next/headers";
+import { cookieToInitialState } from "wagmi";
 import { Providers } from "~/components/providers/providers";
+import { wagmiConfig } from "~/components/providers/providers";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
@@ -14,14 +17,19 @@ export const metadata: Metadata = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const initialState = cookieToInitialState(
+    wagmiConfig,
+    (await headers()).get("cookie"),
+  );
+
   return (
     <html lang="en">
       <body className="antialiased selection:bg-aid-yellow selection:text-aid-dark">
         <TRPCReactProvider>
-          <Providers>
+          <Providers initialState={initialState}>
             {children}
           </Providers>
         </TRPCReactProvider>

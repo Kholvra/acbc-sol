@@ -24,7 +24,7 @@ type WalletWrapperProps = {
 
 export default function WalletWrapper({ className, text }: WalletWrapperProps) {
   return (
-    <div className={`flex ${className}`}>
+    <div className={className ? `flex ${className}` : 'flex'}>
       <Wallet>
         <ConnectWallet className="bg-aid-green text-white hover:bg-aid-dark transition-colors rounded-full px-4 py-2 font-bold font-body">
           <Avatar className="h-6 w-6" />

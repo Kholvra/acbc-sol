@@ -20,8 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     if (!user) {
       redirect('/sign-in');
     }
-  } catch (error) {
-    console.error('Failed to validate dashboard session', error);
+  } catch {
     redirect('/sign-in');
   }
 
