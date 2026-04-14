@@ -6,8 +6,19 @@ import {
 } from "~/server/api/schemas/campaign.schema";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 
+//requires user to be authenticated and have CAMPAIGNER role.
+const campaignerProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  if (ctx.session.user.role !== "CAMPAIGNER") {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Campaigner role required to create campaigns",
+    });
+  }
+  return next();
+});
+
 export const campaignRouter = createTRPCRouter({
-  createCampaign: protectedProcedure
+  createCampaign: campaignerProcedure
     .input(createCampaignSchema)
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
