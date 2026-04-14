@@ -61,8 +61,14 @@ export const RoleSelectionModal = ({ isOpen, onSuccess, currentRole }: RoleSelec
       // Invalidate to sync with server (cache already has correct value)
       await utils.user.getProfile.invalidate();
 
+      // Smart redirect: check KYC status for CAMPAIGNER
       if (data.role === 'CAMPAIGNER') {
-        router.push('/kyc');
+        const currentProfile = utils.user.getProfile.getData();
+        if (currentProfile?.hasKyc) {
+          router.push('/dashboard');
+        } else {
+          router.push('/kyc');
+        }
       } else {
         router.push('/dashboard');
       }
