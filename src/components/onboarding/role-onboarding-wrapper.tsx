@@ -39,15 +39,9 @@ export const RoleOnboardingWrapper = () => {
     // no profile data yet - wait
     if (!profile) return;
 
-    // user has role - hide modal
-    if (isCompleting || profile.hasRole) {
-      setShowModal(false);
-      return;
-    }
-
-    // no role - quarantine or show modal
+    // always show modal as role switcher
     const isRestricted = RESTRICTED_ROUTES.some(route => pathname.startsWith(route));
-    if (isRestricted) {
+    if (isRestricted && !profile.hasRole) {
       router.push('/dashboard');
     } else {
       setShowModal(true);
@@ -69,6 +63,7 @@ export const RoleOnboardingWrapper = () => {
     <RoleSelectionModal
       isOpen={showModal}
       onSuccess={handleSuccess}
+      currentRole={profile?.role ?? null}
     />
   );
 };
