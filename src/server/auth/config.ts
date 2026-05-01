@@ -63,6 +63,7 @@ function verifySolanaSignature(
 
 export const authConfig = {
   secret: process.env.AUTH_SECRET,
+  trustHost: true,
   providers: [
     CredentialsProvider({
       name: "Solana Wallet",
@@ -128,11 +129,7 @@ export const authConfig = {
           } as const;
         } catch (dbError) {
           console.error("[auth] Database error during sign-in:", dbError);
-          throw new Error(
-            dbError instanceof Error
-              ? `Database error: ${dbError.message}`
-              : "Database unavailable"
-          );
+          return null;
         }
       },
     }),
