@@ -63,7 +63,6 @@ function verifySolanaSignature(
 
 export const authConfig = {
   secret: process.env.AUTH_SECRET,
-  trustHost: true,
   providers: [
     CredentialsProvider({
       name: "Solana Wallet",
