@@ -3,7 +3,7 @@
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, Compass, User, ScrollText, Video, PlusSquare, ShieldCheck, ShieldAlert } from 'lucide-react';
-import { useAccount } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { api } from '~/trpc/react';
 
 import { toast } from 'sonner';
@@ -15,9 +15,9 @@ interface SidebarProps {
 const Sidebar = ({ onOpenCreate }: SidebarProps) => {
   const pathname = usePathname();
   const router = useRouter();
-  const { isConnected } = useAccount();
+  const { connected } = useWallet();
   const { data: profile } = api.user.getProfile.useQuery(undefined, {
-    enabled: isConnected
+    enabled: connected
   });
 
   const navItems = [
@@ -113,7 +113,7 @@ const Sidebar = ({ onOpenCreate }: SidebarProps) => {
              </div>
              
              {/* KYC Status Badge */}
-             {isConnected && (
+             {connected && (
                 <KycStatusBadge />
              )}
          </button>

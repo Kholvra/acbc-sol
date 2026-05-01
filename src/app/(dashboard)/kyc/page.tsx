@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
 import TikTokLayout from '~/components/layout/tiktok-layout';
 import CampaignCreationModal from '~/components/campaign/campaign-creation-modal';
 import { KycVerificationCard } from '~/components/kyc/kyc-verification-card';
@@ -9,13 +9,13 @@ import WalletWrapper from '~/components/providers/wallet-wrapper';
 import { ShieldCheck, User } from 'lucide-react';
 
 const KycPage = () => {
-  const { isConnected } = useAccount();
+  const { connected } = useWallet();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
     <TikTokLayout onOpenCreate={() => setIsModalOpen(true)}>
       <div className="overflow-y-auto h-screen pb-24">
-        {!isConnected ? (
+        {!connected ? (
           <div className="flex flex-col items-center justify-center min-h-[80vh] p-4">
             <div className="bg-white/50 backdrop-blur-xl border border-white/60 p-8 rounded-3xl shadow-xl text-center max-w-md w-full">
               <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-400">

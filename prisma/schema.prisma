@@ -38,18 +38,21 @@ model KycDocument {
 }
 
 model Campaign {
-  id            String   @id @default(cuid())
-  creatorId     String
-  title         String
-  pitchVideoUrl String?
-  category      String
-  province      String
-  targetAmount  Int
-  endDate       DateTime
-  description   String
+  id             String   @id @default(cuid())
+  creatorId      String
+  title          String
+  pitchVideoUrl  String?
+  category       String
+  province       String
+  targetAmount   Int
+  raisedAmount   Int      @default(0)
+  endDate        DateTime
+  description    String
+  onChainAddress String?
+  campaignId     BigInt?
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   creator User @relation(fields: [creatorId], references: [id])
 

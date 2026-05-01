@@ -1,63 +1,43 @@
 'use client';
 
-import React from 'react';
-import { OnchainKitProvider } from '@coinbase/onchainkit';
-import { baseSepolia } from 'wagmi/chains';
+import React, { useMemo } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { WagmiProvider, createConfig, createStorage, cookieStorage, http, type State } from 'wagmi';
-import { coinbaseWallet, injected } from 'wagmi/connectors';
 import { SessionProvider } from 'next-auth/react';
+import { ConnectionProvider, WalletProvider } from '@solana/wallet-adapter-react';
+import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
+import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
+import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
+import '@solana/wallet-adapter-react-ui/styles.css';
 
+const SOLANA_RPC = process.env.NEXT_PUBLIC_SOLANA_RPC_URL ?? 'https://api.devnet.solana.com';
 const queryClient = new QueryClient();
-
-export const wagmiConfig = createConfig({
-  ssr: true,
-  storage: createStorage({
-    storage: cookieStorage,
-  }),
-  chains: [baseSepolia],
-  transports: {
-    [baseSepolia.id]: http('https://sepolia.base.org'), 
-  },
-  connectors: [
-    coinbaseWallet({
-      appName: 'AidBeacon',
-      preference: 'all', 
-    }),
-    injected(),
-  ],
-});
 
 export function Providers({
   children,
-  initialState,
 }: {
   children: React.ReactNode;
-  initialState?: State;
 }) {
-  const apiKey = process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY === 'your-onchainkit-key' ? '' : (process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY ?? '');
+  const network = WalletAdapterNetwork.Devnet;
+
+  const wallets = useMemo(
+    () => [
+      new PhantomWalletAdapter(),
+      new SolflareWalletAdapter(),
+    ],
+    [network]
+  );
 
   return (
     <SessionProvider>
-      <WagmiProvider config={wagmiConfig} initialState={initialState}>
-        <QueryClientProvider client={queryClient}>
-          <OnchainKitProvider
-            apiKey={apiKey}
-            chain={baseSepolia}
-            config={{
-              appearance: {
-                mode: 'light',
-                theme: 'custom',
-              },
-              wallet: {
-                  display: 'modal', 
-              }
-            }}
-          >
-            {children}
-          </OnchainKitProvider>
-        </QueryClientProvider>
-      </WagmiProvider>
+      <ConnectionProvider endpoint={SOLANA_RPC}>
+        <WalletProvider wallets={wallets} autoConnect>
+          <WalletModalProvider>
+            <QueryClientProvider client={queryClient}>
+              {children}
+            </QueryClientProvider>
+          </WalletModalProvider>
+        </WalletProvider>
+      </ConnectionProvider>
     </SessionProvider>
   );
 }

@@ -5,7 +5,7 @@ import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { useAccount } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
 import WalletWrapper from '../providers/wallet-wrapper';
 import { NAV_LINKS } from '~/constants';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -14,7 +14,7 @@ const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const { isConnected } = useAccount();
+  const { connected } = useWallet();
   const pathname = usePathname();
 
   useEffect(() => {
@@ -104,7 +104,7 @@ const Navbar: React.FC = () => {
                 ) : isLoginPage ? null : !isMounted ? (
                     <div className="h-10" />
                 ) : (
-                    isConnected ? (
+                    connected ? (
                         <WalletWrapper />
                     ) : (
                         <Link href="/sign-in" className="px-6 py-2.5 bg-aid-dark text-white font-bold rounded-full hover:bg-aid-green transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
@@ -151,7 +151,7 @@ const Navbar: React.FC = () => {
                         ) : isLoginPage ? null : !isMounted ? (
                             <div className="h-12 w-full" />
                         ) : (
-                            isConnected ? (
+                            connected ? (
                                 <WalletWrapper className="w-full justify-center" />
                             ) : (
                                 <Link href="/sign-in" onClick={() => setIsMobileMenuOpen(false)} className="w-full text-center px-6 py-3 bg-aid-dark text-white font-bold rounded-xl hover:bg-aid-green transition-all">

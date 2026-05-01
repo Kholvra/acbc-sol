@@ -1,14 +1,12 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MeetingProvider, MeetingConsumer, useMeeting, useParticipant } from '@videosdk.live/react-sdk';
 import { generateVideoSDKToken } from '~/utils/videosdk';
 import { useParams, useRouter } from 'next/navigation';
-import { Mic, MicOff, Video, VideoOff, Gift, Users, MapPin } from 'lucide-react';
-import { useReadContract, useReadContracts, useWatchContractEvent, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { FACTORY_ADDRESS, FACTORY_ABI, CAMPAIGN_ABI } from '~/constants/contracts';
-import { fetchJSONFromIPFS } from '~/utils/pinata';
-import { formatEther } from 'viem';
+import { Mic, MicOff, Video, VideoOff, Users, MapPin } from 'lucide-react';
+import { useCampaignState } from '~/hooks/use-campaign-state';
+import { api } from '~/trpc/react';
 
 const ParticipantView = ({ participantId }: { participantId: string }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -61,19 +59,6 @@ const ParticipantView = ({ participantId }: { participantId: string }) => {
   );
 };
 
-interface CampaignMetadata {
-  name?: string;
-  description?: string;
-  properties?: {
-    location?: {
-      formatted?: string;
-    };
-    province?: string;
-    target?: bigint;
-  };
-  [key: string]: unknown;
-}
-
 const Controls = ({ onLeave, micOn, webcamOn, toggleMic, toggleWebcam }: { onLeave: () => void; micOn: boolean; webcamOn: boolean; toggleMic: () => void; toggleWebcam: () => void }) => {
     return (
         <div className="flex gap-6 items-center justify-center p-6 w-full absolute bottom-8 z-30">
@@ -99,76 +84,23 @@ const MeetingView = ({ meetingId }: { meetingId: string }) => {
     const speakers = [...participants.values()].filter(p => p.mode === "SEND_AND_RECV");
     const localSpeaker = speakers.find(p => p.local);
 
-    const [campaignAddress, setCampaignAddress] = useState<string | null>(null);
-    const [campaignMetadata, setCampaignMetadata] = useState<CampaignMetadata | null>(null);
-    const [donationNotification, setDonationNotification] = useState<string | null>(null);
-
-    const { data: allCampaigns } = useReadContract({ address: FACTORY_ADDRESS, abi: FACTORY_ABI, functionName: 'getCampaigns' });
-    const { data: allMetadata } = useReadContracts({
-        contracts: allCampaigns?.map((addr) => ({ address: addr, abi: CAMPAIGN_ABI, functionName: 'metadata' })) ?? [],
-        query: { enabled: !!allCampaigns }
-    });
-
-    useEffect(() => {
-        const findCampaign = async () => {
-            if (!allCampaigns || !allMetadata) return;
-            for (let i = 0; i < allCampaigns.length; i++) {
-                const result = allMetadata[i];
-                if (result?.status === 'success') {
-                    const metaArray = result.result as [string, string, bigint, string];
-                    if (metaArray[1].startsWith('ipfs://')) {
-                         try {
-                             const data = await fetchJSONFromIPFS(metaArray[1]) as { animation_url?: string; properties?: { location?: { formatted?: string } } } | null;
-                             if (data?.animation_url === `live://${meetingId}`) {
-                                 setCampaignAddress(allCampaigns[i] as string);
-                                 setCampaignMetadata({ name: metaArray[0], description: metaArray[1], properties: { location: { formatted: data.properties?.location?.formatted ?? 'Live Location' } } });
-                                 break;
-                             }
-                         } catch (e) { console.error(e); }
-                    }
-                }
-            }
-        };
-        void findCampaign();
-    }, [allCampaigns, allMetadata, meetingId]);
-
-    useWatchContractEvent({
-        address: campaignAddress as `0x${string}`,
-        abi: CAMPAIGN_ABI,
-        eventName: 'DonationReceived',
-        onLogs(logs) {
-            const log = logs[0] as { args?: { donor?: string; amount?: bigint } };
-            if (log.args?.donor && log.args?.amount) {
-                const { donor, amount } = log.args;
-                void setDonationNotification(`💸 ${donor.substring(0, 6)}... sent IDRX ${Number(formatEther(amount)).toLocaleString('id-ID')}!`);
-                setTimeout(() => void setDonationNotification(null), 5000);
-            }
-        },
-        enabled: !!campaignAddress
-    });
+    // Find campaign by meeting ID using tRPC
+    const { data: allCampaigns } = api.campaign.getAllCampaigns.useQuery(undefined, { refetchInterval: 30000 });
     
-    const { data: totalRaised } = useReadContract({ address: campaignAddress as `0x${string}`, abi: CAMPAIGN_ABI, functionName: 'totalRaised', query: { enabled: !!campaignAddress, refetchInterval: 5000 } });
-    const raised = totalRaised ? formatEther(totalRaised) : '0';
-    const target = campaignMetadata?.properties?.target ? formatEther(campaignMetadata.properties.target) : '1';
-    const progress = Math.min((Number(raised) / Number(target)) * 100, 100);
+    const campaign = useMemo(() => {
+        if (!allCampaigns) return null;
+        return allCampaigns.find(c => c.pitchVideoUrl === `live://${meetingId}`) ?? null;
+    }, [allCampaigns, meetingId]);
 
-    const { writeContract, data: endTxHash, isPending: isEndingLive } = useWriteContract();
-    const { isSuccess: isEndConfirmed } = useWaitForTransactionReceipt({ hash: endTxHash });
+    const onChainState = useCampaignState(campaign?.onChainAddress);
 
-    useEffect(() => {
-        if (isEndConfirmed) {
-            leave();
-            router.push('/live');
-        }
-    }, [isEndConfirmed, leave, router]);
+    const raised = onChainState.raisedAmount ? Number(onChainState.raisedAmount) / 1e9 : 0;
+    const target = campaign?.targetAmount ? Number(campaign.targetAmount) : 1;
+    const progress = target > 0 ? Math.min((raised / target) * 100, 100) : 0;
 
     const handleLeave = () => {
-        if (campaignAddress && !isEndingLive) {
-            writeContract({ address: campaignAddress as `0x${string}`, abi: CAMPAIGN_ABI, functionName: 'cancel' });
-        } else {
-            leave();
-            void router.push('/live');
-        }
+        leave();
+        void router.push('/live');
     };
 
     return (
@@ -182,13 +114,12 @@ const MeetingView = ({ meetingId }: { meetingId: string }) => {
                                 <div className="w-2 h-2 rounded-full bg-[#658C58]" />
                                 <span className="text-xs font-black uppercase tracking-widest">ON AIR</span>
                             </div>
-                            {campaignMetadata && <div className="bg-black/40 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 w-fit flex items-center gap-1 text-white/80"><MapPin size={12}/> <span className="text-xs font-bold">{String(campaignMetadata.properties?.location?.formatted ?? 'Live Location')}</span></div>}
+                            {campaign && <div className="bg-black/40 backdrop-blur-md px-3 py-1 rounded-lg border border-white/10 w-fit flex items-center gap-1 text-white/80"><MapPin size={12}/> <span className="text-xs font-bold">{String(campaign.province ?? 'Live Location')}</span></div>}
                          </div>
                          <div className="bg-black/40 backdrop-blur-md text-white px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/10"><Users size={14} /> <span className="text-xs font-bold">128</span></div>
                     </div>
-                     {donationNotification && <div className="absolute top-1/3 left-0 right-0 flex justify-center pointer-events-none"><div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-black px-6 py-4 rounded-2xl shadow-2xl animate-bounce flex items-center gap-3 border-2 border-white"><Gift size={24} /> <span className="text-lg">{donationNotification}</span></div></div>}
                     <div className="mb-24 px-2">
-                        {campaignAddress ? (
+                        {campaign ? (
                             <div className="bg-black/30 backdrop-blur-lg rounded-2xl p-4 border border-white/5">
                                 <p className="text-white/60 text-xs font-bold uppercase mb-1">Total Raised</p>
                                 <div className="flex items-end justify-between mb-2"><span className="text-2xl font-black text-white">IDRX {Number(raised).toLocaleString('id-ID')}</span><span className="text-white/60 text-xs font-bold mb-1">of {Number(target).toLocaleString('id-ID')}</span></div>

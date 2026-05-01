@@ -3,15 +3,26 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, MapPin, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { parseEther } from 'viem';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { FACTORY_ADDRESS, FACTORY_ABI } from '~/constants/contracts';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { PublicKey, Transaction } from '@solana/web3.js';
+import { createAssociatedTokenAccountInstruction, getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { Program, AnchorProvider, BN } from '@coral-xyz/anchor';
+import {
+  PROGRAM_ID,
+  IDRX_MINT,
+  AID_BEACON_IDL,
+  type AidBeaconIdl,
+  findConfigPda,
+  findCampaignPda,
+  findCampaignVaultPda,
+} from '~/constants/contracts';
 import { uploadJSONToIPFS } from '~/utils/pinata';
-import { createMeeting, generateToken } from '~/utils/videosdk';
+import { createMeeting, generateVideoSDKToken } from '~/utils/videosdk';
 import { getCurrentPosition, fetchLocationDetails, type LocationDetails } from '~/utils/location';
 import { PROVINCES } from '~/constants/provinces';
+import { api } from '~/trpc/react';
 
 interface LiveCreationModalProps {
   isOpen: boolean;
@@ -33,12 +44,16 @@ const LiveCreationModal: React.FC<LiveCreationModalProps> = ({ isOpen, onClose }
 
   const [step, setStep] = useState<'form' | 'uploading' | 'blockchain' | 'success'>('form');
   const [generatedMeetingId, setGeneratedMeetingId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: hash, writeContract, isPending: isWalletConfirming, error: writeError } = useWriteContract();
+  const { publicKey, signTransaction } = useWallet();
+  const { connection } = useConnection();
 
-  const { isLoading: isTransactionConfirming, isSuccess: isTransactionSuccess, error: receiptError } = useWaitForTransactionReceipt({
-    hash,
-    query: { enabled: !!hash, refetchInterval: 1000 }
+  const createCampaignMutation = api.campaign.createCampaign.useMutation({
+    onError: (error) => {
+      console.error('Failed to save campaign to database:', error);
+      toast.error('Failed to save campaign to database');
+    },
   });
 
   // Auto-fetch location when modal opens
@@ -76,9 +91,10 @@ const LiveCreationModal: React.FC<LiveCreationModalProps> = ({ isOpen, onClose }
 
     try {
         setStep('uploading');
+        setIsSubmitting(true);
 
         // 1. Generate VideoSDK Meeting
-        const token = await generateToken();
+        const token = await generateVideoSDKToken();
         if (!token) throw new Error("Failed to generate VideoSDK token");
         const meetingId = await createMeeting(token);
         if (!meetingId) throw new Error("Failed to create live meeting");
@@ -105,50 +121,107 @@ const LiveCreationModal: React.FC<LiveCreationModalProps> = ({ isOpen, onClose }
 
         setStep('blockchain');
 
-        // 3. Create Campaign
-        writeContract({
-            address: FACTORY_ADDRESS,
-            abi: FACTORY_ABI,
-            functionName: 'createCampaign',
-            args: [
-                formData.title,
-                `ipfs://${ipfsHash}`,
-                parseEther(formData.targetAmount),
-                "Emergency Relief"
-            ],
+        // 3. Save to database via tRPC
+        const campaignItems = [{
+          itemName: formData.title.slice(0, 50),
+          quantity: 1,
+          estimatedPrice: Math.max(1, Math.floor(Number(formData.targetAmount) / 5)),
+        }];
+
+        await createCampaignMutation.mutateAsync({
+          title: formData.title,
+          pitchVideoUrl: `live://${meetingId}`,
+          category: 'Emergency Relief',
+          province: formData.province,
+          targetAmount: Number(formData.targetAmount),
+          endDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          description: `Live Broadcast from ${location.formatted}`,
+          items: campaignItems,
         });
+        toast.success('Campaign saved to database!');
+
+        // 4. Create on-chain campaign via Anchor
+        if (!publicKey || !signTransaction) {
+          toast.error('Wallet not connected');
+          setStep('form');
+          setIsSubmitting(false);
+          return;
+        }
+
+        const campaignId = new BN(Date.now());
+        const [configPda] = findConfigPda();
+        const [campaignPda] = findCampaignPda(publicKey, BigInt(campaignId.toString()));
+        const [vaultPda] = findCampaignVaultPda(campaignPda);
+
+        const provider = new AnchorProvider(
+          connection,
+          { publicKey, signTransaction } as never,
+          { commitment: 'confirmed' }
+        );
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const program = new Program(AID_BEACON_IDL, provider) as any;
+
+        const tx = new Transaction();
+
+        // Ensure vault token account exists
+        const vaultAccountInfo = await connection.getAccountInfo(vaultPda);
+        if (!vaultAccountInfo) {
+          tx.add(
+            createAssociatedTokenAccountInstruction(
+              publicKey,
+              vaultPda,
+              campaignPda,
+              IDRX_MINT
+            )
+          );
+        }
+
+        tx.add(
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+          await program.methods
+            .create_campaign(
+              campaignId,
+              formData.title,
+              `Live Broadcast from ${location.formatted}`,
+              'Emergency Relief',
+              new BN(Number(formData.targetAmount) * 1e9)
+            )
+            .accounts({
+              creator: publicKey,
+              campaign: campaignPda,
+              campaignVault: vaultPda,
+              idrxMint: IDRX_MINT,
+              config: configPda,
+              tokenProgram: TOKEN_PROGRAM_ID,
+              systemProgram: PublicKey.default,
+            })
+            .instruction()
+        );
+
+        tx.feePayer = publicKey;
+        tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+        const signed = await signTransaction(tx);
+        const sig = await connection.sendRawTransaction(signed.serialize());
+        await connection.confirmTransaction(sig, 'confirmed');
+
+        setStep('success');
+        toast.success('Campaign Live!', { description: 'Redirecting to Studio...' });
+        setTimeout(() => {
+          router.push(`/live/studio/${meetingId}`);
+          onClose();
+        }, 1500);
 
     } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Creation error:', error);
         toast.error('Creation Failed', { description: errorMessage });
         setStep('form');
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
-  // Handle errors
-  useEffect(() => {
-    if (writeError) {
-        const errorMsg = writeError.message.slice(0, 100);
-        toast.error('Transaction Failed', { description: errorMsg });
-    }
-    if (receiptError) {
-        toast.error('Transaction Receipt Failed');
-    }
-  }, [writeError, receiptError]);
-
-  // Handle success
-  useEffect(() => {
-    if (isTransactionSuccess && generatedMeetingId) {
-        setStep('success');
-        toast.success('Campaign Live!', { description: 'Redirecting to Studio...' });
-
-        setTimeout(() => {
-            router.push(`/live/studio/${generatedMeetingId}`);
-            onClose();
-        }, 1500);
-    }
-  }, [isTransactionSuccess, generatedMeetingId, router, onClose]);
 
   return (
     <AnimatePresence>
@@ -187,7 +260,7 @@ const LiveCreationModal: React.FC<LiveCreationModalProps> = ({ isOpen, onClose }
                     <h3 className="text-xl font-bold text-[#658C58] mb-2">You are LIVE!</h3>
                     <p className="text-[#658C58]/70">Redirecting to studio...</p>
                 </div>
-            ) : step === 'uploading' || step === 'blockchain' || isTransactionConfirming ? (
+            ) : step === 'uploading' || step === 'blockchain' || isSubmitting ? (
                 <div className="text-center py-12 space-y-4">
                     <Loader2 className="w-12 h-12 text-[#BBC863] animate-spin mx-auto" />
                     <div>
@@ -266,9 +339,9 @@ const LiveCreationModal: React.FC<LiveCreationModalProps> = ({ isOpen, onClose }
                     <button
                     type="submit"
                     className="w-full bg-[#BBC863] hover:bg-[#AAB752] text-white font-black py-4 rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    disabled={!location || isWalletConfirming}
+                    disabled={!location || isSubmitting}
                     >
-                    {isWalletConfirming ? <Loader2 className="animate-spin" size={20} /> : null}
+                    {isSubmitting ? <Loader2 className="animate-spin" size={20} /> : null}
                     START LIVE NOW
                     </button>
                     <p className="text-xs text-center text-[#658C58]/50 mt-2">

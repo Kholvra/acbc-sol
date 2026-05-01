@@ -5,10 +5,19 @@ import { MeetingProvider, MeetingConsumer, useMeeting, useParticipant } from '@v
 import { generateVideoSDKToken } from '~/utils/videosdk';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { X, Heart, Share2, Users, MapPin, Gift, ChevronDown } from 'lucide-react';
-import { useReadContract, useWatchContractEvent, useWriteContract, useWaitForTransactionReceipt, useAccount, useSwitchChain } from 'wagmi';
-import { CAMPAIGN_ABI, IDRX_ADDRESS, IDRX_ABI } from '~/constants/contracts';
-import { formatEther, parseEther } from 'viem';
-import { fetchJSONFromIPFS } from '~/utils/pinata';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
+import { getAssociatedTokenAddress, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { Program, AnchorProvider, BN } from '@coral-xyz/anchor';
+import {
+  IDRX_MINT,
+  AID_BEACON_IDL,
+  type AidBeaconIdl,
+  findCampaignVaultPda,
+  findDonationPda,
+} from '~/constants/contracts';
+import { useCampaignState } from '~/hooks/use-campaign-state';
+import { api } from '~/trpc/react';
 import { toast } from 'sonner';
 
 const StreamPlayer = ({ participantId }: { participantId: string }) => {
@@ -58,130 +67,89 @@ const StreamPlayer = ({ participantId }: { participantId: string }) => {
   );
 };
 
-interface CampaignMetadata {
-  name?: string;
-  description?: string;
-  properties?: {
-    location?: {
-      formatted?: string;
-    };
-    province?: string;
-  };
-  target?: bigint;
-  [key: string]: unknown;
-}
-
-const ViewerOverlay = ({ campaignAddress }: { campaignAddress?: string }) => {
+const ViewerOverlay = ({ campaignId }: { campaignId?: string }) => {
     const { participants, join, meetingId } = useMeeting();
     const router = useRouter();
+    const { publicKey, signTransaction } = useWallet();
+    const { connection } = useConnection();
 
     useEffect(() => {
         if (!meetingId) join();
     }, [meetingId, join]);
 
     const speakers = [...participants.values()].filter(p => p.mode === "SEND_AND_RECV");
-    const { address: userAddress, chain } = useAccount();
-    const { switchChain } = useSwitchChain();
 
-    const [metadata, setMetadata] = useState<CampaignMetadata | null>(null);
-    const [location, setLocation] = useState<string>('Unknown Location');
-    const [donationNotification, setDonationNotification] = useState<string | null>(null);
+    const { data: campaign } = api.campaign.getCampaignById.useQuery(
+      { campaignId: campaignId ?? '' },
+      { enabled: !!campaignId }
+    );
+
+    const onChainState = useCampaignState(campaign?.onChainAddress);
+
     const [isDonationSheetOpen, setIsDonationSheetOpen] = useState(false);
     const [donationAmount, setDonationAmount] = useState('');
-    const [donationStep, setDonationStep] = useState<'idle' | 'approving' | 'ready' | 'donating'>('idle');
+    const [isDonating, setIsDonating] = useState(false);
 
-    const { data: contractMetadata } = useReadContract({
-        address: campaignAddress as `0x${string}`,
-        abi: CAMPAIGN_ABI,
-        functionName: 'metadata',
-        query: { enabled: !!campaignAddress }
-    });
-
-    const { data: totalRaised, refetch: refetchRaised } = useReadContract({
-        address: campaignAddress as `0x${string}`,
-        abi: CAMPAIGN_ABI,
-        functionName: 'totalRaised',
-        query: { enabled: !!campaignAddress, refetchInterval: 5000 }
-    });
-
-    const { data: allowance, refetch: refetchAllowance } = useReadContract({
-        address: IDRX_ADDRESS,
-        abi: IDRX_ABI,
-        functionName: 'allowance',
-        args: userAddress && campaignAddress ? [userAddress, campaignAddress as `0x${string}`] : undefined,
-    });
-
-    const { writeContract, data: txHash, isPending } = useWriteContract();
-    const { isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
-
-    useEffect(() => {
-        if (contractMetadata) {
-            const meta = contractMetadata as [string, string, bigint, string];
-            setMetadata({ name: meta[0], description: meta[1], target: meta[2] });
-            if (meta[1].startsWith('ipfs://')) {
-                void fetchJSONFromIPFS(meta[1]).then((data: unknown) => {
-                    if (data && typeof data === 'object' && 'properties' in data) {
-                        const props = data.properties as { location?: { formatted?: string }; province?: string };
-                        setLocation(props.location?.formatted ?? props.province ?? 'Live Location');
-                    }
-                });
-            }
-        }
-    }, [contractMetadata]);
-
-    useEffect(() => {
-        if (isConfirmed) {
-            if (donationStep === 'approving') {
-                void toast.success("Approved! Now click Donate.");
-                void refetchAllowance();
-                setDonationStep('ready');
-            } else if (donationStep === 'donating') {
-                void toast.success("Donation Sent!");
-                void refetchRaised();
-                setDonationStep('idle');
-                setIsDonationSheetOpen(false);
-                setDonationAmount('');
-            }
-        }
-    }, [isConfirmed, donationStep, refetchAllowance, refetchRaised]);
-
-    useWatchContractEvent({
-        address: campaignAddress as `0x${string}`,
-        abi: CAMPAIGN_ABI,
-        eventName: 'DonationReceived',
-        onLogs(logs) {
-            const log = logs[0] as { args?: { donor?: string; amount?: bigint } };
-            if (log.args?.donor && log.args?.amount) {
-                const { donor, amount } = log.args;
-                const formattedAmount = Number(formatEther(amount)).toLocaleString('id-ID');
-                const donorName = `${donor.substring(0, 6)}...${donor.substring(donor.length - 4)}`;
-                void setDonationNotification(`💸 ${donorName} donated IDRX ${formattedAmount}!`);
-                void refetchRaised();
-                setTimeout(() => void setDonationNotification(null), 5000);
-            }
-        },
-    });
-
-    const handleDonationAction = () => {
-        if (!donationAmount || !campaignAddress) return;
-        if (chain?.id !== 84532) {
-            switchChain({ chainId: 84532 });
+    const handleDonationAction = async () => {
+        if (!donationAmount || !campaign?.onChainAddress || !publicKey || !signTransaction) {
+            toast.error('Connect wallet and enter amount');
             return;
         }
-        const amount = parseEther(donationAmount);
-        const currentAllowance = allowance ?? BigInt(0);
-        if (donationStep === 'ready' || currentAllowance >= amount) {
-             setDonationStep('donating');
-             writeContract({ address: campaignAddress as `0x${string}`, abi: CAMPAIGN_ABI, functionName: 'donate', args: [amount] });
-        } else {
-             setDonationStep('approving');
-             writeContract({ address: IDRX_ADDRESS, abi: IDRX_ABI, functionName: 'approve', args: [campaignAddress as `0x${string}`, amount] });
+        setIsDonating(true);
+        try {
+            const campaignPubkey = new PublicKey(campaign.onChainAddress);
+            const [vaultPda] = findCampaignVaultPda(campaignPubkey);
+            const donationId = BigInt(Date.now());
+            const [donationPda] = findDonationPda(publicKey, campaignPubkey, donationId);
+            const donorAta = await getAssociatedTokenAddress(IDRX_MINT, publicKey);
+
+            const provider = new AnchorProvider(
+              connection,
+              { publicKey, signTransaction } as never,
+              { commitment: 'confirmed' }
+            );
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const program = new Program(AID_BEACON_IDL, provider) as any;
+
+            const amountUnits = new BN(Math.floor(Number(donationAmount)));
+
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+            const ix = await program.methods
+                .donate(new BN(donationId.toString()), amountUnits)
+                .accounts({
+                  donor: publicKey,
+                  campaign: campaignPubkey,
+                  donor_token_account: donorAta,
+                  campaignVault: vaultPda,
+                  idrxMint: IDRX_MINT,
+                  donation: donationPda,
+                  tokenProgram: TOKEN_PROGRAM_ID,
+                  systemProgram: SystemProgram.programId,
+                })
+                .instruction();
+
+            const tx = new Transaction().add(ix);
+            tx.feePayer = publicKey;
+            tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+            const signed = await signTransaction(tx);
+            const sig = await connection.sendRawTransaction(signed.serialize());
+            await connection.confirmTransaction(sig, 'confirmed');
+
+            toast.success('Donation Sent!');
+            setIsDonationSheetOpen(false);
+            setDonationAmount('');
+        } catch (err) {
+            console.error(err);
+            toast.error('Donation failed', { description: err instanceof Error ? err.message : 'Unknown error' });
+        } finally {
+            setIsDonating(false);
         }
     };
 
-    const raised = totalRaised ? formatEther(totalRaised) : '0';
-    const target = metadata?.target ? formatEther(metadata.target) : '1';
-    const progress = Math.min((Number(raised) / Number(target)) * 100, 100);
+    const raised = onChainState.raisedAmount ? Number(onChainState.raisedAmount) / 1e9 : 0;
+    const target = campaign?.targetAmount ? Number(campaign.targetAmount) : 1;
+    const progress = target > 0 ? Math.min((raised / target) * 100, 100) : 0;
 
     return (
         <div className="fixed inset-0 bg-black z-50">
@@ -211,23 +179,15 @@ const ViewerOverlay = ({ campaignAddress }: { campaignAddress?: string }) => {
                      </button>
                  </div>
 
-                 {donationNotification && (
-                     <div className="absolute top-1/3 left-0 right-0 flex justify-center pointer-events-none">
-                         <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-black px-6 py-3 rounded-full shadow-xl animate-bounce flex items-center gap-2">
-                             <Gift size={20} /> {donationNotification}
-                         </div>
-                     </div>
-                 )}
-
                  <div className="pointer-events-auto bg-gradient-to-t from-black via-black/60 to-transparent px-4 pb-8 pt-12">
                      <div className="mb-4">
                          <div className="flex items-center gap-2 mb-2">
                              <span className="bg-blue-600/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase tracking-wider flex items-center gap-1">
-                                 <MapPin size={10} /> {location}
+                                 <MapPin size={10} /> {campaign?.province ?? 'Live Location'}
                              </span>
                          </div>
                          <h2 className="text-white font-heading font-black text-xl leading-tight drop-shadow-md">
-                             {metadata?.name ?? 'Loading Campaign...'}
+                             {campaign?.title ?? 'Loading Campaign...'}
                          </h2>
                      </div>
 
@@ -256,22 +216,22 @@ const ViewerOverlay = ({ campaignAddress }: { campaignAddress?: string }) => {
 
              {isDonationSheetOpen && (
                  <div className="absolute inset-0 z-50 flex flex-col justify-end">
-                     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setIsDonationSheetOpen(false); setDonationStep('idle'); }} />
+                     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => { setIsDonationSheetOpen(false); }} />
                      <div className="bg-white rounded-t-3xl p-6 relative z-10 animate-in slide-in-from-bottom flex flex-col gap-4">
                          <div className="flex justify-between items-center">
                              <h3 className="font-heading font-black text-xl text-aid-dark">Donate IDRX</h3>
-                             <button onClick={() => { setIsDonationSheetOpen(false); setDonationStep('idle'); }}><ChevronDown /></button>
+                             <button onClick={() => { setIsDonationSheetOpen(false); }}><ChevronDown /></button>
                          </div>
                          <div className="grid grid-cols-3 gap-2">
                              {['10000', '50000', '100000'].map(amt => (
-                                 <button key={amt} onClick={() => setDonationAmount(amt)} disabled={donationStep === 'ready'} className={`py-2 rounded-xl border-2 font-bold ${donationAmount === amt ? 'border-aid-green bg-green-50 text-aid-green' : 'border-gray-100 text-gray-500'} disabled:opacity-50`}>
+                                 <button key={amt} onClick={() => setDonationAmount(amt)} className={`py-2 rounded-xl border-2 font-bold ${donationAmount === amt ? 'border-aid-green bg-green-50 text-aid-green' : 'border-gray-100 text-gray-500'}`}>
                                      {Number(amt).toLocaleString('id-ID')}
                                  </button>
                              ))}
                          </div>
-                         <input type="number" value={donationAmount} onChange={(e) => setDonationAmount(e.target.value)} placeholder="Custom Amount" disabled={donationStep === 'ready'} className="w-full px-4 py-3 border border-gray-200 rounded-xl font-bold bg-gray-50 focus:outline-none focus:border-aid-green disabled:opacity-50 disabled:bg-gray-200" />
-                         <button onClick={handleDonationAction} disabled={!donationAmount || isPending} className="w-full bg-aid-green text-white font-black py-4 rounded-xl text-lg hover:bg-aid-dark disabled:opacity-50">
-                             {isPending ? 'Processing...' : donationStep === 'approving' ? 'Step 1/2: Approve IDRX' : 'Step 2/2: Donate Now'}
+                         <input type="number" value={donationAmount} onChange={(e) => setDonationAmount(e.target.value)} placeholder="Custom Amount" className="w-full px-4 py-3 border border-gray-200 rounded-xl font-bold bg-gray-50 focus:outline-none focus:border-aid-green" />
+                         <button onClick={() => void handleDonationAction()} disabled={!donationAmount || isDonating} className="w-full bg-aid-green text-white font-black py-4 rounded-xl text-lg hover:bg-aid-dark disabled:opacity-50">
+                             {isDonating ? 'Processing...' : 'Donate Now'}
                          </button>
                      </div>
                  </div>
@@ -284,7 +244,7 @@ const ViewerStream = () => {
     const params = useParams();
     const id = params.id as string;
     const searchParams = useSearchParams();
-    const address = searchParams.get('address') ?? undefined;
+    const campaignId = searchParams.get('id') ?? undefined;
     const [token, setToken] = useState<string>("");
 
     useEffect(() => {
@@ -306,7 +266,7 @@ const ViewerStream = () => {
         token={token}
       >
         <MeetingConsumer>
-          {() => <ViewerOverlay campaignAddress={address} />}
+          {() => <ViewerOverlay campaignId={campaignId} />}
         </MeetingConsumer>
       </MeetingProvider>
     );

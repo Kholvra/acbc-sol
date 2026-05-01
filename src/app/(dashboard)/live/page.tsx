@@ -1,135 +1,63 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useReadContract, useReadContracts } from 'wagmi';
-import { FACTORY_ADDRESS, FACTORY_ABI, CAMPAIGN_ABI } from '~/constants/contracts';
-import { fetchJSONFromIPFS } from '~/utils/pinata';
-import { formatEther } from 'viem';
+import React, { useState, useMemo } from 'react';
 import { Loader2, Radio, MapPin, Play, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import TikTokLayout from '~/components/layout/tiktok-layout';
 import LiveCreationModal from '~/components/live/live-creation-modal';
+import { api } from '~/trpc/react';
+import { isCampaignExpired } from '~/utils/date';
 
 interface LiveCampaign {
-  address: string;
+  id: string;
   title: string;
   isActive: boolean;
   location: string;
-  animation_url?: string;
   meetingId: string;
   viewers: number;
   totalRaised: string;
   target: string;
 }
 
-interface OffchainMetadata {
-  name?: string;
-  description?: string;
-  image?: string;
-  animation_url?: string;
-  properties?: {
-    campaignType?: string;
-    location?: {
-      formatted?: string;
-    };
-    province?: string;
-    [key: string]: unknown;
-  };
-  [key: string]: unknown;
-}
-
 const LiveFeedPage: React.FC = () => {
   const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [liveCampaigns, setLiveCampaigns] = useState<LiveCampaign[]>([]);
-  const [endedCampaigns, setEndedCampaigns] = useState<LiveCampaign[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: campaignAddresses } = useReadContract({
-    address: FACTORY_ADDRESS,
-    abi: FACTORY_ABI,
-    functionName: 'getCampaigns',
-    query: { refetchInterval: 5000 }
+  const { data: allCampaigns, isLoading } = api.campaign.getAllCampaigns.useQuery(undefined, {
+    refetchInterval: 30000,
   });
 
-  const { data: campaignsData } = useReadContracts({
-    contracts: campaignAddresses?.flatMap((addr) => [
-      { address: addr, abi: CAMPAIGN_ABI, functionName: 'isActive' },
-      { address: addr, abi: CAMPAIGN_ABI, functionName: 'metadata' },
-      { address: addr, abi: CAMPAIGN_ABI, functionName: 'totalRaised' }
-    ]) ?? [],
-    query: {
-        enabled: !!campaignAddresses && campaignAddresses.length > 0,
-        refetchInterval: 5000
+  const { liveCampaigns, endedCampaigns } = useMemo(() => {
+    const live: LiveCampaign[] = [];
+    const ended: LiveCampaign[] = [];
+    if (!allCampaigns) return { liveCampaigns: live, endedCampaigns: ended };
+
+    for (const c of allCampaigns) {
+      if (!c.pitchVideoUrl?.startsWith('live://')) continue;
+      const meetingId = c.pitchVideoUrl.replace('live://', '');
+      const isExpired = isCampaignExpired(c.endDate?.toISOString());
+      const isCompleted = c.raisedAmount >= c.targetAmount;
+      const isActive = !isExpired && !isCompleted;
+
+      const campaignObj: LiveCampaign = {
+        id: c.id,
+        title: c.title,
+        isActive,
+        location: c.province ?? 'Unknown Location',
+        meetingId,
+        viewers: Math.floor(Math.random() * 500) + 10,
+        totalRaised: c.raisedAmount.toLocaleString('id-ID'),
+        target: c.targetAmount.toLocaleString('id-ID'),
+      };
+
+      if (isActive) {
+        live.push(campaignObj);
+      } else {
+        ended.push(campaignObj);
+      }
     }
-  });
-
-  useEffect(() => {
-    const loadData = async () => {
-        try {
-            if (!campaignAddresses || !campaignsData) return;
-
-            setIsLoading(true);
-            const live: LiveCampaign[] = [];
-            const ended: LiveCampaign[] = [];
-
-            const promises = campaignAddresses.map(async (addr, index) => {
-                const activeResult = campaignsData[index * 3];
-                const metaResult = campaignsData[index * 3 + 1];
-                const raisedResult = campaignsData[index * 3 + 2];
-
-                if (activeResult?.status === 'success' && metaResult?.status === 'success') {
-                     const isActive = activeResult.result as boolean;
-                     const metaArray = metaResult.result as [string, string, bigint, string];
-                     const descriptionOrIPFS = metaArray[1];
-                     const title = metaArray[0];
-                     const target = metaArray[2];
-
-                     const totalRaised = raisedResult?.status === 'success' ? (raisedResult.result as bigint) : BigInt(0);
-                     const raisedFormatted = Number(formatEther(totalRaised)).toLocaleString('id-ID', { maximumFractionDigits: 0 });
-
-                     if (descriptionOrIPFS?.startsWith('ipfs://')) {
-                         try {
-                             const data = await fetchJSONFromIPFS(descriptionOrIPFS) as OffchainMetadata | null;
-                             if (data?.properties?.campaignType === 'live') {
-
-                                 const campaignObj: LiveCampaign = {
-                                     address: addr,
-                                     title: title,
-                                     isActive: isActive,
-                                     location: data.properties.location?.formatted ?? data.properties.province ?? 'Unknown Location',
-                                     animation_url: data.animation_url,
-                                     meetingId: data.animation_url?.replace('live://', '') ?? '',
-                                     viewers: Math.floor(Math.random() * 500) + 10,
-                                     totalRaised: raisedFormatted,
-                                     target: formatEther(target)
-                                 };
-
-                                 if (isActive) {
-                                     live.push(campaignObj);
-                                 } else {
-                                     ended.push(campaignObj);
-                                 }
-                             }
-                         } catch (e) {
-                            console.error('Failed to process campaign:', e);
-                         }
-                     }
-                }
-            });
-
-            await Promise.all(promises);
-            setLiveCampaigns(live);
-            setEndedCampaigns(ended);
-        } catch (err) {
-            console.error('Failed to load campaigns:', err);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-    
-    void loadData();
-  }, [campaignAddresses, campaignsData]);
+    return { liveCampaigns: live, endedCampaigns: ended };
+  }, [allCampaigns]);
 
   return (
     <TikTokLayout onOpenCreate={() => setIsModalOpen(true)}>
@@ -155,10 +83,10 @@ const LiveFeedPage: React.FC = () => {
                                     <span className="w-2 h-2 rounded-full bg-[#BBC863] animate-pulse"/>
                                     Live Now
                                 </h2>
-                                <span className="text-sm text-[#658C58]/60 font-bold">{liveCampaigns.length} Active</span>
+                                <span className="text-sm text-[#658C58]/60 font-bold">{liveCampaigns?.length ?? 0} Active</span>
                              </div>
 
-                             {liveCampaigns.length === 0 ? (
+                             {liveCampaigns?.length === 0 ? (
                                  <div className="bg-[#F0E491]/20 rounded-2xl p-8 text-center border border-[#BBC863]/20 shadow-sm">
                                      <div className="w-12 h-12 bg-[#F0E491]/40 rounded-full flex items-center justify-center mx-auto mb-3 text-[#658C58]">
                                          <Radio size={24}/>
@@ -170,9 +98,9 @@ const LiveFeedPage: React.FC = () => {
                                  <div className="grid grid-cols-1 gap-4">
                                      {liveCampaigns.map((camp) => (
                                          <div
-                                            key={camp.address}
+                                            key={camp.id}
                                             onClick={ () => {
-                                                router.push(`/live/view/${camp.meetingId}?address=${camp.address}`);
+                                                router.push(`/live/view/${camp.meetingId}?id=${camp.id}`);
                                             }}
                                             className="bg-white rounded-2xl overflow-hidden shadow-sm border border-[#BBC863]/20 cursor-pointer hover:shadow-md transition-shadow group relative"
                                         >
@@ -197,7 +125,7 @@ const LiveFeedPage: React.FC = () => {
                                                       <div>
                                                           <p className="text-xs text-[#BBC863] font-bold uppercase tracking-wider mb-1">{camp.location}</p>
                                                           <h3 className="font-heading font-bold text-[#658C58] leading-tight line-clamp-2">{camp.title}</h3>
-                                                          <p className="text-xs text-[#658C58]/50 mt-1 font-mono">@{camp.address.slice(0,6)}...{camp.address.slice(-4)}</p>
+                                                          <p className="text-xs text-[#658C58]/50 mt-1 font-mono">#{camp.id.slice(0,6)}</p>
                                                       </div>
                                                  </div>
                                              </div>
@@ -207,12 +135,12 @@ const LiveFeedPage: React.FC = () => {
                              )}
                          </section>
 
-                         {endedCampaigns.length > 0 && (
+                         {(endedCampaigns?.length ?? 0) > 0 && (
                              <section>
                                  <h2 className="text-lg font-bold text-[#658C58]/60 mb-4">Recently Ended</h2>
                                  <div className="grid grid-cols-2 gap-3">
-                                      {endedCampaigns.map((camp) => (
-                                          <div key={camp.address} className="bg-white rounded-xl p-3 border border-[#BBC863]/20">
+                                      {endedCampaigns?.map((camp) => (
+                                          <div key={camp.id} className="bg-white rounded-xl p-3 border border-[#BBC863]/20">
                                               <p className="text-[10px] text-[#BBC863] font-bold uppercase mb-1">{camp.location}</p>
                                               <p className="font-bold text-sm text-[#658C58] line-clamp-2">{camp.title}</p>
                                               <div className="mt-2 flex items-center justify-between">

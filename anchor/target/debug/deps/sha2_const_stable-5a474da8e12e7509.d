@@ -1,0 +1,10 @@
+/home/cokoo/Documents/codingg/COLOSEUM_FRON/aid-beacon-rework/anchor/target/debug/deps/sha2_const_stable-5a474da8e12e7509.d: /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/lib.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/constants.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/sha.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/util.rs
+
+/home/cokoo/Documents/codingg/COLOSEUM_FRON/aid-beacon-rework/anchor/target/debug/deps/libsha2_const_stable-5a474da8e12e7509.rlib: /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/lib.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/constants.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/sha.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/util.rs
+
+/home/cokoo/Documents/codingg/COLOSEUM_FRON/aid-beacon-rework/anchor/target/debug/deps/libsha2_const_stable-5a474da8e12e7509.rmeta: /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/lib.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/constants.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/sha.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/util.rs
+
+/home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/lib.rs:
+/home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/constants.rs:
+/home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/sha.rs:
+/home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/sha2-const-stable-0.1.0/src/util.rs:

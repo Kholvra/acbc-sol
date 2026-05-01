@@ -29,9 +29,9 @@ export const env = createEnv({
     NEXT_PUBLIC_PINATA_JWT: z.string(),
     NEXT_PUBLIC_GATEWAY_URL: z.string(),
     NEXT_PUBLIC_VIDEOSDK_API_KEY: z.string(),
-    NEXT_PUBLIC_ONCHAINKIT_API_KEY: z.string(),
-    NEXT_PUBLIC_FACTORY_ADDRESS: z.string(),
-    NEXT_PUBLIC_IDRX_ADDRESS: z.string(),
+    NEXT_PUBLIC_PROGRAM_ID: z.string(),
+    NEXT_PUBLIC_IDRX_MINT: z.string(),
+    NEXT_PUBLIC_SOLANA_RPC_URL: z.string().url().default("https://api.devnet.solana.com"),
   },
 
   /**
@@ -47,9 +47,9 @@ export const env = createEnv({
     NEXT_PUBLIC_PINATA_JWT: process.env.NEXT_PUBLIC_PINATA_JWT,
     NEXT_PUBLIC_GATEWAY_URL: process.env.NEXT_PUBLIC_GATEWAY_URL,
     NEXT_PUBLIC_VIDEOSDK_API_KEY: process.env.NEXT_PUBLIC_VIDEOSDK_API_KEY,
-    NEXT_PUBLIC_ONCHAINKIT_API_KEY: process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY,
-    NEXT_PUBLIC_FACTORY_ADDRESS: process.env.NEXT_PUBLIC_FACTORY_ADDRESS,
-    NEXT_PUBLIC_IDRX_ADDRESS: process.env.NEXT_PUBLIC_IDRX_ADDRESS,
+    NEXT_PUBLIC_PROGRAM_ID: process.env.NEXT_PUBLIC_PROGRAM_ID,
+    NEXT_PUBLIC_IDRX_MINT: process.env.NEXT_PUBLIC_IDRX_MINT,
+    NEXT_PUBLIC_SOLANA_RPC_URL: process.env.NEXT_PUBLIC_SOLANA_RPC_URL,
     GROQ_API_KEY: process.env.GROQ_API_KEY,
   },
   /**

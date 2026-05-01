@@ -1,19 +1,33 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { PublicKey, Transaction } from '@solana/web3.js';
+import { getAssociatedTokenAddress, createAssociatedTokenAccountInstruction, TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { Program, AnchorProvider, BN } from '@coral-xyz/anchor';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { CAMPAIGN_ABI, IDRX_ADDRESS, IDRX_ABI } from '~/constants/contracts';
-import { formatEther, parseEther } from 'viem';
+import { QUICK_DONATE_AMOUNT } from '~/constants/donation';
 import { Heart, Share2, Pause, Play, Volume2, VolumeX, Users, Music2, ChevronUp, ChevronDown, MapPin, Loader2 } from 'lucide-react';
 import { fetchJSONFromIPFS } from '~/utils/pinata';
 import { SwipeGestureWrapper } from './swipe-gesture-wrapper';
 import { useQuickDonate } from '~/hooks/use-quick-donate';
-import { QUICK_DONATE_AMOUNT } from '~/constants/donation';
+import { useCampaignState } from '~/hooks/use-campaign-state';
+import { PROGRAM_ID, IDRX_MINT, AID_BEACON_IDL, type AidBeaconIdl, findCampaignVaultPda, findDonationPda, findConfigPda } from '~/constants/contracts';
 
 interface CampaignCardProps {
-  address: string;
+  campaign: {
+    id: string;
+    title: string;
+    description: string;
+    category: string;
+    targetAmount: number;
+    endDate: Date;
+    onChainAddress: string | null;
+    pitchVideoUrl: string | null;
+    province: string;
+    creator: { name: string | null; address: string };
+  };
 }
 
 interface OffchainMetadata {
@@ -34,34 +48,21 @@ function isMobileDevice() {
   return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
+const CampaignCard: React.FC<CampaignCardProps> = ({ campaign }) => {
   const router = useRouter();
-  const { address: userAddress } = useAccount();
+  const { publicKey } = useWallet();
   const isMobile = isMobileDevice();
 
-  const { data: metadata, isLoading: isMetadataLoading } = useReadContract({
-    address: address as `0x${string}`,
-    abi: CAMPAIGN_ABI,
-    functionName: 'metadata',
-  });
+  const { connection } = useConnection();
+  const { signTransaction } = useWallet();
+  const onChainState = useCampaignState(campaign.onChainAddress);
 
-  const { data: totalRaised, refetch: refetchTotalRaised } = useReadContract({
-    address: address as `0x${string}`,
-    abi: CAMPAIGN_ABI,
-    functionName: 'totalRaised',
-  });
-
-  const { data: allowance, refetch: refetchAllowance } = useReadContract({
-      address: IDRX_ADDRESS,
-      abi: IDRX_ABI,
-      functionName: 'allowance',
-      args: userAddress ? [userAddress, address as `0x${string}`] : undefined,
-  });
+  const hasOnChainAddress = !!campaign.onChainAddress && campaign.onChainAddress.length >= 32;
 
   const { executeQuickDonate, isProcessing: isQuickDonatingProcess } = useQuickDonate({
-    campaignAddress: address as `0x${string}`,
+    campaignAddress: campaign.onChainAddress ?? '',
     onSuccess: () => {
-      void refetchTotalRaised();
+      onChainState.refresh();
       setIsExpanded(false);
     },
   });
@@ -71,85 +72,13 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
   const [isMuted, setIsMuted] = React.useState(true);
   const [isLiked, setIsLiked] = React.useState(false);
   const [isExpanded, setIsExpanded] = React.useState(false);
-  
+
   const [donationAmount, setDonationAmount] = React.useState('');
   const [isDonating, setIsDonating] = React.useState(false);
   const [isQuickDonating, setIsQuickDonating] = React.useState(false);
+  const [isCustomDonating, setIsCustomDonating] = React.useState(false);
 
-  const { writeContract, data: hash, isPending, error: txError } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
-
-  const [step, setStep] = useState<'idle' | 'approving' | 'ready' | 'donating'>('idle');
-
-  useEffect(() => {
-    if (isConfirmed) {
-        if (step === 'approving') {
-            void toast.success("Approval Successful!", { description: "Now click Donate to complete." });
-            void refetchAllowance();
-            setStep('ready');
-        } else if (step === 'donating') {
-            void toast.success("Donation Successful!", { description: "Thank you for your contribution." });
-            void refetchTotalRaised();
-            setStep('idle');
-            setDonationAmount('');
-            setIsDonating(false);
-            setIsQuickDonating(false);
-        }
-    }
-    if (txError) {
-        void toast.error("Transaction Failed");
-        setStep('idle');
-    }
-  }, [isConfirmed, step, refetchAllowance, refetchTotalRaised, txError]);
-
-  const handleAction = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      if (!donationAmount) return;
-      
-      const amountBigInt = parseEther(donationAmount);
-      const currentAllowance = allowance ?? BigInt(0);
-
-      if (step === 'ready' || currentAllowance >= amountBigInt) {
-            setStep('donating');
-            writeContract({
-                address: address as `0x${string}`,
-                abi: CAMPAIGN_ABI,
-                functionName: 'donate',
-                args: [amountBigInt],
-            });
-      } else {
-            setStep('approving');
-            writeContract({
-                address: IDRX_ADDRESS,
-                abi: IDRX_ABI,
-                functionName: 'approve',
-                args: [address as `0x${string}`, amountBigInt],
-            });
-      }
-  };
-
-  // State for off-chain metadata
-  const [offchainData, setOffchainData] = React.useState<OffchainMetadata | null>(null);
-  
-  // Type-safe metadata parsing
-  const [title, description, targetAmount, category] = metadata
-    ? (metadata as [string, string, bigint, string])
-    : ['', '', BigInt(0), ''];
-  const isIPFS = description?.startsWith('ipfs://');
-
-  useEffect(() => {
-    if (isIPFS && description) {
-        void fetchJSONFromIPFS(description).then((data: unknown) => {
-            if (data && typeof data === 'object') {
-                setOffchainData(data as OffchainMetadata);
-            }
-        }).catch((err: unknown) => {
-            console.error('Failed to fetch IPFS metadata:', err);
-        });
-    }
-  }, [description, isIPFS]);
-
-  if (isMetadataLoading) {
+  if (onChainState.isLoading) {
     return (
       <div className="h-full w-full bg-white animate-pulse flex items-center justify-center rounded-xl shadow-sm border border-aid-green/10">
         <div className="text-aid-dark/40 font-heading font-bold">Loading Campaign...</div>
@@ -157,23 +86,89 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
     );
   }
 
-  if (!metadata) return null;
+  const raised = Number(onChainState.raisedAmount) / 1e9;
+  const target = campaign.targetAmount;
+  const progress = target > 0 ? Math.min((raised / target) * 100, 100) : 0;
 
-  const raised = totalRaised ? formatEther(totalRaised) : '0';
-  const target = targetAmount ? formatEther(targetAmount) : '0';
-  const progress = Math.min((Number(raised) / Number(target)) * 100, 100);
+  const displayDescription = campaign.description;
+  const displayTitle = campaign.title;
+  const category = campaign.category;
 
-  const displayDescription = offchainData?.description ?? (isIPFS ? "Loading details..." : description);
-  const displayTitle = offchainData?.name ?? title;
+  const handleCustomDonate = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!donationAmount || !campaign.onChainAddress || !publicKey || !signTransaction) return;
+    setIsCustomDonating(true);
+    try {
+      const campaignPubkey = new PublicKey(campaign.onChainAddress);
+      const amount = new BN(Number(donationAmount) * 1e9);
+      const donationId = new BN(Date.now());
+
+      const [configPda] = findConfigPda();
+      const [vaultPda] = findCampaignVaultPda(campaignPubkey);
+      const [donationPda] = findDonationPda(publicKey, campaignPubkey, BigInt(donationId.toString()));
+
+      const donorTokenAccount = await getAssociatedTokenAddress(IDRX_MINT, publicKey);
+
+      const provider = new AnchorProvider(
+        connection,
+        { publicKey, signTransaction } as never,
+        { commitment: 'confirmed' }
+      );
+      const program = new Program(AID_BEACON_IDL as any, provider);
+
+      const tx = new Transaction();
+
+      const donorAccountInfo = await connection.getAccountInfo(donorTokenAccount);
+      if (!donorAccountInfo) {
+        tx.add(
+          createAssociatedTokenAccountInstruction(
+            publicKey,
+            donorTokenAccount,
+            publicKey,
+            IDRX_MINT
+          )
+        );
+      }
+
+      tx.add(
+        await (program.methods as any)
+          .donate(donationId, amount)
+          .accounts({
+            donor: publicKey,
+            campaign: campaignPubkey,
+            donor_token_account: donorTokenAccount,
+            campaign_vault: vaultPda,
+            idrx_mint: IDRX_MINT,
+            donation: donationPda,
+            token_program: TOKEN_PROGRAM_ID,
+            system_program: PublicKey.default,
+          })
+          .instruction()
+      );
+
+      tx.feePayer = publicKey;
+      tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+      const signed = await signTransaction(tx);
+      const sig = await connection.sendRawTransaction(signed.serialize());
+      await connection.confirmTransaction(sig, 'confirmed');
+
+      toast.success(`Donated ${donationAmount} IDRX!`);
+      setDonationAmount('');
+      setIsDonating(false);
+      onChainState.refresh();
+    } catch (err) {
+      toast.error('Donation failed');
+      console.error(err);
+    } finally {
+      setIsCustomDonating(false);
+    }
+  };
 
   const getButtonText = () => {
-      if (isPending || isConfirming) return <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />;
+      if (isCustomDonating) return <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />;
       if (!donationAmount) return 'Enter Amount';
-      if (step === 'ready') return 'Step 2/2: Donate';
-      const val = parseEther(donationAmount);
-      const allow = allowance ?? BigInt(0);
-      if (allow < val) return 'Step 1/2: Approve';
-      return 'Step 2/2: Donate';
+      return 'Donate';
   };
 
     const togglePlay = () => {
@@ -216,7 +211,7 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
                         e.stopPropagation();
                         executeQuickDonate();
                     }}
-                    disabled={isQuickDonatingProcess}
+                    disabled={isQuickDonatingProcess || !hasOnChainAddress}
                     aria-label={`Quick donate ${QUICK_DONATE_AMOUNT} IDRX`}
                     className="flex bg-aid-green hover:bg-aid-dark text-white font-black w-14 h-14 rounded-full shadow-xl transition-all duration-300 disabled:cursor-not-allowed items-center justify-center group border-2 border-white/20 focus:outline-none focus:ring-2 focus:ring-aid-green focus:ring-offset-2"
                 >
@@ -230,13 +225,13 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
 
         <SwipeGestureWrapper 
             onSwipeRight={executeQuickDonate}
-            enabled={!isExpanded && isMobile}
+            enabled={!isExpanded && isMobile && hasOnChainAddress}
         >
             <div className="absolute inset-0 bg-black flex items-center justify-center overflow-hidden" onClick={async (e) => {
-                const animationUrl = offchainData?.animation_url;
-                if (animationUrl?.startsWith('live://')) {
+                const videoUrl = campaign.pitchVideoUrl;
+                if (videoUrl?.startsWith('live://')) {
                     e.stopPropagation();
-                    const meetingId = animationUrl.replace('live://', '');
+                    const meetingId = videoUrl.replace('live://', '');
                     try {
                         router.push(`/live/view/${meetingId}`);
                     } catch (err) {
@@ -247,8 +242,8 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
                 }
                 togglePlay();
             }}>
-                {offchainData?.animation_url ? (
-                    offchainData.animation_url.startsWith('live://') ? (
+                {campaign.pitchVideoUrl ? (
+                    campaign.pitchVideoUrl.startsWith('live://') ? (
                         <div className="w-full h-full relative group cursor-pointer">
                             <div className="absolute inset-0 bg-gray-900 flex items-center justify-center">
                                 <div className="text-center">
@@ -265,14 +260,14 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
                             </div>
                         </div>
                     ) : (
-                        <video 
+                        <video
                             ref={videoRef}
                             className="w-full h-full object-cover"
                             autoPlay
                             muted={isMuted}
                             loop
                             playsInline
-                            src={offchainData.animation_url.replace('ipfs://', process.env.NEXT_PUBLIC_GATEWAY_URL ? `${process.env.NEXT_PUBLIC_GATEWAY_URL}/ipfs/` : 'https://gateway.pinata.cloud/ipfs/')}
+                            src={campaign.pitchVideoUrl.replace('ipfs://', process.env.NEXT_PUBLIC_GATEWAY_URL ? `${process.env.NEXT_PUBLIC_GATEWAY_URL}/ipfs/` : 'https://gateway.pinata.cloud/ipfs/')}
                             onError={(e) => console.error("Video Error:", e)}
                         />
                     )
@@ -333,26 +328,26 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
                             <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 w-full cursor-auto" onClick={(e) => e.stopPropagation()}>
                                 <label className="text-white text-xs font-bold uppercase tracking-wider mb-2 block">Quick Donate (IDRX)</label>
                                 <div className="flex gap-2">
-                                    <input 
-                                        type="number" 
+                                    <input
+                                        type="number"
                                         value={donationAmount}
                                         onChange={(e) => setDonationAmount(e.target.value)}
                                         step="1000"
-                                        disabled={isPending || isConfirming || step === 'ready'}
+                                        disabled={isCustomDonating}
                                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-heading font-bold focus:outline-none focus:border-aid-green transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         placeholder="50000"
                                         autoFocus
                                     />
-                                    <button 
-                                        onClick={handleAction}
-                                        disabled={isPending || isConfirming || !donationAmount}
+                                    <button
+                                        onClick={handleCustomDonate}
+                                        disabled={isCustomDonating || !donationAmount}
                                         className="bg-aid-green text-white font-bold px-6 rounded-xl hover:bg-aid-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all min-w-[100px] flex items-center justify-center text-sm"
                                     >
                                         {getButtonText()}
                                     </button>
                                 </div>
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); setIsQuickDonating(false); setStep('idle'); }} 
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); setIsQuickDonating(false); }}
                                     className="text-white/50 text-xs font-bold mt-3 hover:text-white transition-colors w-full text-center flex items-center justify-center gap-1"
                                 >
                                     <ChevronDown size={14}/> Go Back
@@ -362,33 +357,33 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
                     ) : (
                         <>
                     <div className="mb-2 shrink-0 transition-transform duration-300 flex flex-col flex-1 min-h-0">
-                        <div className="mb-2 shrink-0"> 
+                        <div className="mb-2 shrink-0">
                             <div className="flex flex-wrap gap-2 mb-2">
                                 <span className="bg-aid-yellow/90 text-aid-dark text-[10px] font-bold px-2 py-0.5 rounded-full border border-aid-green/20 uppercase tracking-wider shadow-sm whitespace-nowrap">
                                     {category}
                                 </span>
-                                {offchainData?.properties?.province && (
+                                {campaign.province && (
                                     <span className="bg-blue-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full border border-white/20 uppercase tracking-wider shadow-sm flex items-center gap-1 whitespace-nowrap">
-                                        <MapPin size={10} /> {offchainData.properties.province}
+                                        <MapPin size={10} /> {campaign.province}
                                     </span>
                                 )}
                             </div>
-                                
+
                             <h3 className={`text-white font-heading font-black leading-tight drop-shadow-md transition-all w-full ${isExpanded ? 'text-2xl' : 'text-xl'}`}>
-                                {displayTitle || `@${address.slice(0, 6)}...`}
+                                {displayTitle || `@${campaign.creator.address.slice(0, 4)}...`}
                             </h3>
-                            
-                            {offchainData?.properties?.endDate && (
+
+                            {campaign.endDate && (
                                 <div className="flex items-center gap-1 mt-1">
                                     <span className="bg-white/20 backdrop-blur-md text-white/90 text-[10px] font-bold px-2 py-0.5 rounded-full border border-white/10 uppercase tracking-wider flex items-center gap-1">
-                                        ⏳ {Math.ceil((new Date(offchainData.properties.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) > 0 
-                                            ? `${Math.ceil((new Date(offchainData.properties.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} Days Left` 
+                                        ⏳ {Math.ceil((new Date(campaign.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) > 0
+                                            ? `${Math.ceil((new Date(campaign.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} Days Left`
                                             : 'Ended'}
                                     </span>
                                 </div>
                             )}
                         </div>
-                        
+
                         <div className={`transition-all duration-300 ease-in-out flex-1 flex flex-col min-h-0 ${isExpanded ? 'opacity-100' : 'opacity-0 max-h-0 overflow-hidden'}`}>
                             <div className="bg-[#BBC863] text-white rounded-xl p-4 mt-1 mb-2 shadow-sm flex-1 overflow-y-auto custom-scrollbar">
                                 <p className="font-bold mb-1 block sticky top-0 bg-[#BBC863] pb-1">Description Campaign:</p>
@@ -418,36 +413,37 @@ const CampaignCard: React.FC<CampaignCardProps> = ({ address }) => {
                         {isExpanded && (
                             <div className="mt-6 w-full" onClick={(e) => e.stopPropagation()}>
                                 {!isDonating ? (
-                                    <button 
+                                    <button
                                         onClick={() => setIsDonating(true)}
-                                        className="w-full bg-aid-green text-white font-black py-4 rounded-full shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-lg uppercase tracking-wide"
+                                        disabled={!hasOnChainAddress}
+                                        className="w-full bg-aid-green text-white font-black py-4 rounded-full shadow-lg hover:scale-[1.02] active:scale-95 transition-all text-lg uppercase tracking-wide disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        Donate IDRX
+                                        {hasOnChainAddress ? 'Donate IDRX' : 'Not Yet On-Chain'}
                                     </button>
                                 ) : (
                                     <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 animate-in fade-in slide-in-from-bottom-4">
                                         <label className="text-white text-xs font-bold uppercase tracking-wider mb-2 block">Amount (IDRX)</label>
                                         <div className="flex gap-2">
-                                            <input 
-                                                type="number" 
+                                            <input
+                                                type="number"
                                                 value={donationAmount}
                                                 onChange={(e) => setDonationAmount(e.target.value)}
                                                 step="1000"
-                                                disabled={isPending || isConfirming || step === 'ready'}
+                                                disabled={isCustomDonating}
                                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white font-heading font-bold focus:outline-none focus:border-aid-green transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                 placeholder="50000"
                                                 autoFocus
                                             />
-                                            <button 
-                                                onClick={handleAction}
-                                                disabled={isPending || isConfirming || !donationAmount}
+                                            <button
+                                                onClick={handleCustomDonate}
+                                                disabled={isCustomDonating || !donationAmount}
                                                 className="bg-aid-green text-white font-bold px-6 rounded-xl hover:bg-aid-dark disabled:opacity-50 disabled:cursor-not-allowed transition-all min-w-[100px] flex items-center justify-center text-sm"
                                             >
                                                 {getButtonText()}
                                             </button>
                                         </div>
-                                        <button 
-                                            onClick={() => { setIsDonating(false); setStep('idle'); }} 
+                                        <button
+                                            onClick={() => { setIsDonating(false); }}
                                             className="text-white/50 text-xs font-bold mt-3 hover:text-white transition-colors w-full text-center"
                                         >
                                             Cancel Donation

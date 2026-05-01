@@ -26,6 +26,8 @@ export const createCampaignSchema = z.object({
     .string()
     .min(20, "Description must contain at least 20 characters"),
   items: z.array(campaignItemSchema).min(1, "At least 1 item is required"),
+  onChainAddress: z.string().optional(),
+  campaignId: z.string().optional(),
 });
 
 export const updateCampaignSchema = z.object({

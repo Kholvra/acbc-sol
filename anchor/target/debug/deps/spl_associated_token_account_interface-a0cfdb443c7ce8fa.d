@@ -1,0 +1,9 @@
+/home/cokoo/Documents/codingg/COLOSEUM_FRON/aid-beacon-rework/anchor/target/debug/deps/spl_associated_token_account_interface-a0cfdb443c7ce8fa.d: /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/spl-associated-token-account-interface-2.0.0/src/lib.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/spl-associated-token-account-interface-2.0.0/src/address.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/spl-associated-token-account-interface-2.0.0/src/instruction.rs
+
+/home/cokoo/Documents/codingg/COLOSEUM_FRON/aid-beacon-rework/anchor/target/debug/deps/libspl_associated_token_account_interface-a0cfdb443c7ce8fa.rlib: /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/spl-associated-token-account-interface-2.0.0/src/lib.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/spl-associated-token-account-interface-2.0.0/src/address.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/spl-associated-token-account-interface-2.0.0/src/instruction.rs
+
+/home/cokoo/Documents/codingg/COLOSEUM_FRON/aid-beacon-rework/anchor/target/debug/deps/libspl_associated_token_account_interface-a0cfdb443c7ce8fa.rmeta: /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/spl-associated-token-account-interface-2.0.0/src/lib.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/spl-associated-token-account-interface-2.0.0/src/address.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/spl-associated-token-account-interface-2.0.0/src/instruction.rs
+
+/home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/spl-associated-token-account-interface-2.0.0/src/lib.rs:
+/home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/spl-associated-token-account-interface-2.0.0/src/address.rs:
+/home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/spl-associated-token-account-interface-2.0.0/src/instruction.rs:

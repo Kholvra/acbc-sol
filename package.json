@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "next build",
+    "build": "prisma generate && next build",
     "check": "next lint && tsc --noEmit",
     "db:generate": "prisma migrate dev",
     "db:migrate": "prisma migrate deploy",
@@ -18,14 +18,22 @@
     "lint:fix": "next lint --fix",
     "preview": "next build && next start",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "anchor:deploy": "cd anchor && npx tsx scripts/deploy.ts",
+    "anchor:airdrop": "cd anchor && npx tsx scripts/airdrop.ts"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.7.2",
-    "@coinbase/onchainkit": "^1.1.2",
+    "@coral-xyz/anchor": "^0.30.1",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^6.6.0",
     "@radix-ui/react-select": "^2.2.6",
+    "@solana/spl-token": "^0.4.9",
+    "@solana/wallet-adapter-base": "^0.9.23",
+    "@solana/wallet-adapter-react": "^0.15.35",
+    "@solana/wallet-adapter-react-ui": "^0.9.35",
+    "@solana/wallet-adapter-wallets": "^0.19.32",
+    "@solana/web3.js": "^1.95.3",
     "@t3-oss/env-nextjs": "^0.12.0",
     "@tanstack/react-query": "^5.69.0",
     "@trpc/client": "^11.0.0",
@@ -54,8 +62,7 @@
     "sonner": "^2.0.7",
     "superjson": "^2.2.1",
     "tailwind-merge": "^3.5.0",
-    "viem": "^2.45.1",
-    "wagmi": "^2.19.5",
+    "tweetnacl": "^1.0.3",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -71,6 +78,7 @@
     "prettier-plugin-tailwindcss": "^0.6.11",
     "prisma": "^6.6.0",
     "tailwindcss": "^4.0.15",
+    "tsx": "^4.21.0",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.27.0"
   },

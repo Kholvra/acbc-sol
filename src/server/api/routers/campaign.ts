@@ -22,7 +22,7 @@ export const campaignRouter = createTRPCRouter({
     .input(createCampaignSchema)
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id;
-      const { items, ...campaignData } = input;
+      const { items, onChainAddress, campaignId, ...campaignData } = input;
 
       const campaign = await ctx.db.$transaction(async (tx) => {
         const campaign = await tx.campaign.create({
@@ -35,6 +35,8 @@ export const campaignRouter = createTRPCRouter({
             targetAmount: campaignData.targetAmount,
             endDate: new Date(campaignData.endDate),
             description: campaignData.description,
+            onChainAddress,
+            campaignId: campaignId ? BigInt(campaignId) : undefined,
           },
         });
 
@@ -66,9 +68,12 @@ export const campaignRouter = createTRPCRouter({
           category: true,
           province: true,
           targetAmount: true,
+          raisedAmount: true,
           endDate: true,
           description: true,
           createdAt: true,
+          onChainAddress: true,
+          campaignId: true,
           creator: {
             select: {
               name: true,
@@ -96,6 +101,32 @@ export const campaignRouter = createTRPCRouter({
       return campaign;
     }),
 
+  getAllCampaigns: publicProcedure.query(async ({ ctx }) => {
+    return ctx.db.campaign.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        targetAmount: true,
+        raisedAmount: true,
+        endDate: true,
+        createdAt: true,
+        onChainAddress: true,
+        campaignId: true,
+        category: true,
+        province: true,
+        description: true,
+        pitchVideoUrl: true,
+        creator: {
+          select: {
+            name: true,
+            address: true,
+          },
+        },
+      },
+    });
+  }),
+
   getMyCampaigns: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db.campaign.findMany({
       where: { creatorId: ctx.session.user.id },
@@ -104,8 +135,11 @@ export const campaignRouter = createTRPCRouter({
         id: true,
         title: true,
         targetAmount: true,
+        raisedAmount: true,
         endDate: true,
         createdAt: true,
+        onChainAddress: true,
+        campaignId: true,
       },
     });
   }),

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAccount, useSignMessage } from 'wagmi';
+import { useWallet } from '@solana/wallet-adapter-react';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import WalletWrapper from '~/components/providers/wallet-wrapper';
 import Button from '~/components/ui/button';
@@ -21,8 +21,7 @@ const buildAuthMessage = (address: string, timestamp: number): string => {
 };
 
 const SignInPage: React.FC = () => {
-  const { isConnected, address, isConnecting } = useAccount();
-  const { signMessageAsync } = useSignMessage();
+  const { connected, publicKey, signMessage } = useWallet();
   const { status } = useSession();
   const router = useRouter();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -38,13 +37,14 @@ const SignInPage: React.FC = () => {
     isLoading: isProfileLoading,
     isError: hasProfileError,
   } = api.user.getProfile.useQuery(undefined, {
-    enabled: status === 'authenticated' && isConnected,
+    enabled: status === 'authenticated' && connected,
     retry: false,
     staleTime: 0, // always refetch when enabled
   });
 
   // track which address we've already attempted auth for
   const lastAuthAttemptAddress = useRef<string | null>(null);
+  const address = publicKey?.toBase58() ?? null;
 
   useEffect(() => {
     setIsMounted(true);
@@ -56,12 +56,19 @@ const SignInPage: React.FC = () => {
       return;
     }
 
+    if (!signMessage) {
+      toast.error('Wallet does not support message signing');
+      return;
+    }
+
     setIsAuthenticating(true);
 
     try {
       const timestamp = Date.now();
       const message = buildAuthMessage(walletAddress, timestamp);
-      const signature = await signMessageAsync({ message });
+      const messageBytes = new TextEncoder().encode(message);
+      const signatureBytes = await signMessage(messageBytes);
+      const signature = Buffer.from(signatureBytes).toString('base64');
 
       const result = await signIn('credentials', {
         message,
@@ -82,7 +89,7 @@ const SignInPage: React.FC = () => {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Authentication failed';
       
-      if (message.includes('User rejected')) {
+      if (message.includes('User rejected') || message.includes('cancelled')) {
         toast.error('Signature cancelled');
       } else {
         toast.error(message);
@@ -91,18 +98,18 @@ const SignInPage: React.FC = () => {
       setIsAuthenticating(false);
       // don't reset ref - let user manually retry via button
     }
-  }, [signMessageAsync, router, status, profile, utils]);
+  }, [signMessage, status, profile, utils]);
 
   useEffect(() => {
-    if (isConnected && address && !isAuthenticating && status === 'unauthenticated' && lastAuthAttemptAddress.current !== address) {
+    if (connected && address && !isAuthenticating && status === 'unauthenticated' && lastAuthAttemptAddress.current !== address) {
       lastAuthAttemptAddress.current = address;
       void handleSignIn(address);
     }
 
-    if (!isConnected) {
+    if (!connected) {
       lastAuthAttemptAddress.current = null;
     }
-  }, [isConnected, address, isAuthenticating, status, handleSignIn]);
+  }, [connected, address, isAuthenticating, status, handleSignIn]);
 
   // redirect to dashboard if authenticated and profile exists
   useEffect(() => {
@@ -130,9 +137,9 @@ const SignInPage: React.FC = () => {
   }, [status, profile, hasProfileError, isProfileLoading, router]);
 
   // Render a stable fallback until the client has mounted to avoid wallet/session hydration mismatches.
-  if (!isMounted || status === 'loading' || isConnecting || (status === 'authenticated' && isProfileLoading)) {
+  if (!isMounted || status === 'loading' || (status === 'authenticated' && isProfileLoading)) {
     return (
-      <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center bg-white px-4" data-ock-theme="custom">
+      <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center bg-white px-4">
         <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl border border-aid-dark/5 text-center">
           <div className="flex justify-center mb-6">
             <div className="p-4 rounded-full bg-aid-green text-white">
@@ -141,13 +148,11 @@ const SignInPage: React.FC = () => {
           </div>
 
           <h1 className="text-3xl font-heading font-black text-aid-dark mb-2">
-            {!isMounted || status === 'loading' ? 'Loading...' : isConnecting ? 'Connecting...' : 'Loading...'}
+            {!isMounted || status === 'loading' ? 'Loading...' : 'Loading...'}
           </h1>
           <p className="text-gray-500 mb-8">
             {!isMounted || status === 'loading'
               ? 'Please wait while we prepare your session'
-              : isConnecting
-              ? 'Please approve the connection in your wallet'
               : 'Please wait while we load your profile'}
           </p>
 
@@ -177,7 +182,7 @@ const SignInPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center bg-white px-4" data-ock-theme="custom">
+    <div className="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center bg-white px-4">
       <div className="w-full max-w-md bg-white p-8 rounded-3xl shadow-2xl border border-aid-dark/5 text-center">
         <div className="flex justify-center mb-6">
           <div className="p-4 rounded-full bg-aid-green text-white">
@@ -193,11 +198,11 @@ const SignInPage: React.FC = () => {
         </p>
 
         <div className="space-y-4">
-          {isConnected && address ? (
+          {connected && address ? (
             <>
               <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                 <p className="text-sm text-green-800">
-                  ✅ Wallet connected: <span className="font-mono">{address.slice(0, 6)}...{address.slice(-4)}</span>
+                  Wallet connected: <span className="font-mono">{address.slice(0, 4)}...{address.slice(-4)}</span>
                 </p>
               </div>
               <Button

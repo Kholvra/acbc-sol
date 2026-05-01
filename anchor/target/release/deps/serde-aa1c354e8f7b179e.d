@@ -1,0 +1,14 @@
+/home/cokoo/Documents/codingg/COLOSEUM_FRON/aid-beacon-rework/anchor/target/release/deps/serde-aa1c354e8f7b179e.d: /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/cokoo/Documents/codingg/COLOSEUM_FRON/aid-beacon-rework/anchor/target/release/build/serde-bb49da510ea5f8ec/out/private.rs
+
+/home/cokoo/Documents/codingg/COLOSEUM_FRON/aid-beacon-rework/anchor/target/release/deps/libserde-aa1c354e8f7b179e.rlib: /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/cokoo/Documents/codingg/COLOSEUM_FRON/aid-beacon-rework/anchor/target/release/build/serde-bb49da510ea5f8ec/out/private.rs
+
+/home/cokoo/Documents/codingg/COLOSEUM_FRON/aid-beacon-rework/anchor/target/release/deps/libserde-aa1c354e8f7b179e.rmeta: /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs /home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs /home/cokoo/Documents/codingg/COLOSEUM_FRON/aid-beacon-rework/anchor/target/release/build/serde-bb49da510ea5f8ec/out/private.rs
+
+/home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/lib.rs:
+/home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/integer128.rs:
+/home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/mod.rs:
+/home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/de.rs:
+/home/cokoo/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.228/src/private/ser.rs:
+/home/cokoo/Documents/codingg/COLOSEUM_FRON/aid-beacon-rework/anchor/target/release/build/serde-bb49da510ea5f8ec/out/private.rs:
+
+# env-dep:OUT_DIR=/home/cokoo/Documents/codingg/COLOSEUM_FRON/aid-beacon-rework/anchor/target/release/build/serde-bb49da510ea5f8ec/out

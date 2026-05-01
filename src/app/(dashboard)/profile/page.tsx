@@ -1,158 +1,106 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAccount, useDisconnect, useBalance, useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { LogOut, Copy, ExternalLink, User, Wallet, Coins, ArrowUpRight, ArrowDownLeft, Check } from 'lucide-react';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { LogOut, Copy, ExternalLink, User, Wallet, Coins, ArrowUpRight, ArrowDownLeft, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { PublicKey, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { getAssociatedTokenAddress } from '@solana/spl-token';
 import WalletWrapper from '~/components/providers/wallet-wrapper';
 import TikTokLayout from '~/components/layout/tiktok-layout';
 import CampaignCreationModal from '~/components/campaign/campaign-creation-modal';
-import { IDRX_ADDRESS, IDRX_ABI, FACTORY_ADDRESS, FACTORY_ABI, CAMPAIGN_ABI } from '~/constants/contracts';
-import { formatEther, type Address } from 'viem';
+import { IDRX_MINT } from '~/constants/contracts';
 
 interface DonationHistory {
   type: 'sent' | 'received';
-  campaignAddress: Address;
+  campaignAddress: string;
   campaignTitle: string;
-  otherParty: Address;
+  otherParty: string;
   otherPartyLabel: string;
-  amount: bigint;
-  timestamp: bigint;
-  donor?: Address;
+  amount: number;
+  timestamp: number;
 }
 
 export default function ProfilePage () {
-  const { address, isConnected } = useAccount();
-  const { disconnect } = useDisconnect();
-  const { data: ethBalance } = useBalance({ address });
+  const { publicKey, connected, disconnect } = useWallet();
+  const { connection } = useConnection();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'sent' | 'received'>('sent');
   const [sentHistory, setSentHistory] = useState<DonationHistory[]>([]);
   const [receivedHistory, setReceivedHistory] = useState<DonationHistory[]>([]);
-  const [totalDonated, setTotalDonated] = useState<bigint>(0n);
-  const [totalReceived, setTotalReceived] = useState<bigint>(0n);
+  const [totalDonated, setTotalDonated] = useState(0);
+  const [totalReceived, setTotalReceived] = useState(0);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
 
-  const { data: allCampaigns } = useReadContract({
-        address: FACTORY_ADDRESS,
-        abi: FACTORY_ABI,
-        functionName: 'getCampaigns',
-  });
+  const [solBalance, setSolBalance] = useState<number | null>(null);
+  const [idrxBalance, setIdrxBalance] = useState<number | null>(null);
+  const [isFaucetLoading, setIsFaucetLoading] = useState(false);
 
-  const { data: campaignsData } = useReadContracts({
-        contracts: allCampaigns?.flatMap((addr) => [
-            { address: addr, abi: CAMPAIGN_ABI, functionName: 'metadata' },
-            { address: addr, abi: CAMPAIGN_ABI, functionName: 'owner' },
-            { address: addr, abi: CAMPAIGN_ABI, functionName: 'getRecentDonations', args: [BigInt(100)] }
-        ]) ?? [],
-        query: { enabled: !!allCampaigns }
-  });
+  const address = publicKey?.toBase58() ?? '';
 
+  // Fetch SOL and IDRX balances
   useEffect(() => {
-    const fetchHistory = () => {
-      // BEST PRACTICE: Check .length instead of just truthiness
-      // This narrows readonly Address[] | undefined to readonly Address[]
-      // AND ensures the array is non-empty
-      if (!allCampaigns?.length || !address || !campaignsData) return;
+    if (!publicKey) return;
+    const pk = publicKey;
+    let cancelled = false;
 
-      // TypeScript now knows campaigns is readonly Address[] (non-empty)
-      const campaigns = allCampaigns;
-      const userAddress = address;
-
-      setIsLoadingHistory(true);
-
-      const sent: DonationHistory[] = [];
-      const received: DonationHistory[] = [];
-      let tDonated = 0n;
-      let tReceived = 0n;
-
+    async function fetchBalances() {
       try {
-        // TypeScript cannot narrow indexed access on readonly arrays, so we use
-        // a type-safe pattern: iterate with for...of which properly narrows types
-        let campaignIndex = 0;
-        for (const campaignAddr of campaigns) {
-          const metaResult = campaignsData[campaignIndex * 3];
-          const ownerResult = campaignsData[campaignIndex * 3 + 1];
-          const donationsResult = campaignsData[campaignIndex * 3 + 2];
+        const sol = await connection.getBalance(pk);
+        if (!cancelled) setSolBalance(sol / LAMPORTS_PER_SOL);
 
-          const title = metaResult?.status === 'success' ? (metaResult.result as [string, string, bigint, string])[0] : 'Unknown Campaign';
-          const owner = ownerResult?.status === 'success' ? (ownerResult.result as Address) : null;
-          const isMyCampaign = owner?.toLowerCase() === userAddress.toLowerCase();
-
-          if (donationsResult?.status === 'success') {
-            const donations = donationsResult.result as unknown as DonationHistory[];
-            for (const donation of donations) {
-              const { donor, amount, timestamp } = donation;
-
-              if (!donor) continue;
-
-              if (donor.toLowerCase() === userAddress.toLowerCase()) {
-                tDonated += amount;
-                sent.push({
-                  type: 'sent',
-                  campaignAddress: campaignAddr,
-                  campaignTitle: title,
-                  otherParty: donor,
-                  otherPartyLabel: 'To Campaign',
-                  amount,
-                  timestamp
-                });
-              }
-
-              if (isMyCampaign) {
-                tReceived += amount;
-                received.push({
-                  type: 'received',
-                  campaignAddress: campaignAddr,
-                  campaignTitle: title,
-                  otherParty: donor,
-                  otherPartyLabel: 'From Donor',
-                  amount,
-                  timestamp
-                });
-              }
-            }
-          }
-          campaignIndex++;
+        const ata = await getAssociatedTokenAddress(IDRX_MINT, pk);
+        const tokenAccount = await connection.getTokenAccountBalance(ata);
+        if (!cancelled) setIdrxBalance(Number(tokenAccount.value.uiAmount ?? 0));
+      } catch {
+        if (!cancelled) {
+          setSolBalance(0);
+          setIdrxBalance(0);
         }
-
-        setSentHistory(sent.sort((a, b) => Number(b.timestamp) - Number(a.timestamp)));
-        setReceivedHistory(received.sort((a, b) => Number(b.timestamp) - Number(a.timestamp)));
-        setTotalDonated(tDonated);
-        setTotalReceived(tReceived);
-
-      } catch (e) {
-        console.error("Error processing history:", e);
-      } finally {
-        setIsLoadingHistory(false);
       }
+    }
+
+    void fetchBalances();
+    const interval = setInterval(fetchBalances, 10000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
     };
+  }, [publicKey, connection]);
 
-    if (isConnected) fetchHistory();
-  }, [allCampaigns, address, campaignsData, isConnected]);
-
-  const { data: idrxBalance, refetch: refetchIdrx } = useReadContract({
-      address: IDRX_ADDRESS,
-      abi: IDRX_ABI,
-      functionName: 'balanceOf',
-      args: address ? [address] : undefined,
-  });
-
-  const { writeContract, data: hash } = useWriteContract();
-  const { isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
-
+  // Stub history fetching (donation history from on-chain is complex; placeholder)
   useEffect(() => {
-      if (isConfirmed) {
-          void toast.success("Faucet Claimed! You received 1,000,000 IDRX.");
-          void refetchIdrx();
-      }
-  }, [isConfirmed, refetchIdrx]);
+    if (!connected) return;
+    setIsLoadingHistory(true);
+    // TODO: Implement donation history fetching from Solana program events or indexer
+    setSentHistory([]);
+    setReceivedHistory([]);
+    setTotalDonated(0);
+    setTotalReceived(0);
+    setIsLoadingHistory(false);
+  }, [connected, publicKey]);
 
-  const handleFaucet = () => {
-      if (!address) return;
-      writeContract({ address: IDRX_ADDRESS, abi: IDRX_ABI, functionName: 'mint', args: [address] });
+  const handleFaucet = async () => {
+    if (!publicKey) return;
+    setIsFaucetLoading(true);
+    try {
+      const res = await fetch('/api/faucet', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ walletAddress: publicKey.toBase58() }),
+      });
+      const data = await res.json() as { success?: boolean; amount?: number; error?: string; signature?: string };
+      if (!res.ok) throw new Error(data.error ?? 'Faucet failed');
+      toast.success(`Faucet Claimed! You received ${(data.amount ?? 0).toLocaleString('id-ID')} IDRX.`);
+      setIdrxBalance((prev) => (prev ?? 0) + (data.amount ?? 0));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Faucet claim failed');
+      console.error(err);
+    } finally {
+      setIsFaucetLoading(false);
+    }
   };
 
   const handleCopy = async (text: string) => {
@@ -167,7 +115,7 @@ export default function ProfilePage () {
   return (
     <TikTokLayout onOpenCreate={() => setIsModalOpen(true)}>
         <div className="overflow-y-auto h-screen pb-24">
-            {!isConnected ? (
+            {!connected ? (
                 <div className="flex flex-col items-center justify-center min-h-[80vh] p-4">
                     <div className="bg-white/50 backdrop-blur-xl border border-white/60 p-8 rounded-3xl shadow-xl text-center max-w-md w-full">
                         <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-400"><User size={40} /></div>
@@ -182,7 +130,7 @@ export default function ProfilePage () {
                         <div className="h-32 bg-gradient-to-r from-aid-green/20 to-aid-primary/20 relative">
                             <div className="absolute -bottom-12 left-8">
                                 <div className="w-24 h-24 rounded-full bg-white p-1 shadow-lg">
-                                    <div className="w-full h-full rounded-full bg-gradient-to-br from-aid-green to-aid-secondary flex items-center justify-center text-white font-bold text-3xl">{address?.slice(2, 4).toUpperCase()}</div>
+                                    <div className="w-full h-full rounded-full bg-gradient-to-br from-aid-green to-aid-secondary flex items-center justify-center text-white font-bold text-3xl">{address ? address.slice(0, 2).toUpperCase() : ''}</div>
                                 </div>
                             </div>
                         </div>
@@ -192,14 +140,14 @@ export default function ProfilePage () {
                                 <div>
                                     <h1 className="text-3xl font-heading font-black text-aid-dark mb-1">My Profile</h1>
                                     <div className="flex items-center gap-2 text-gray-500 font-mono text-sm bg-gray-100 px-3 py-1 rounded-full w-fit">
-                                        <span>{address?.slice(0, 6)}...{address?.slice(-4)}</span>
-                                        <button onClick={() => address && handleCopy(address)}>{copiedAddress === address ? <Check size={14} className="text-green-500"/> : <Copy size={14}/>}</button>
-                                        <a href={`https://sepolia.basescan.org/address/${address}`} target="_blank" rel="noreferrer"><ExternalLink size={14}/></a>
+                                        <span>{address.slice(0, 4)}...{address.slice(-4)}</span>
+                                        <button onClick={() => handleCopy(address)}>{copiedAddress === address ? <Check size={14} className="text-green-500"/> : <Copy size={14}/>}</button>
+                                        <a href={`https://solscan.io/account/${address}?cluster=devnet`} target="_blank" rel="noreferrer"><ExternalLink size={14}/></a>
                                     </div>
                                 </div>
                                 <div className="flex flex-col gap-2 text-right md:w-auto w-full">
-                                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100"><div className="text-xs text-gray-400 font-bold uppercase mb-1">Native Balance</div><div className="text-xl font-heading font-black text-aid-dark flex items-center gap-1 justify-end"><Wallet size={16}/>{ethBalance ? `${parseFloat(ethBalance.formatted).toFixed(4)} ETH` : '...'}</div></div>
-                                    <div className="bg-aid-green/10 p-4 rounded-2xl border border-aid-green/20"><div className="text-xs text-aid-green font-bold uppercase mb-1">IDRX Balance</div><div className="text-2xl font-heading font-black text-aid-dark flex items-center gap-1 justify-end"><Coins size={20}/>{idrxBalance !== undefined ? `IDRX ${Number(formatEther(idrxBalance)).toLocaleString('id-ID')}` : 'Loading...'}</div></div>
+                                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100"><div className="text-xs text-gray-400 font-bold uppercase mb-1">Native Balance</div><div className="text-xl font-heading font-black text-aid-dark flex items-center gap-1 justify-end"><Wallet size={16}/>{solBalance !== null ? `${solBalance.toFixed(4)} SOL` : '...'}</div></div>
+                                    <div className="bg-aid-green/10 p-4 rounded-2xl border border-aid-green/20"><div className="text-xs text-aid-green font-bold uppercase mb-1">IDRX Balance</div><div className="text-2xl font-heading font-black text-aid-dark flex items-center gap-1 justify-end"><Coins size={20}/>{idrxBalance !== null ? `IDRX ${idrxBalance.toLocaleString('id-ID')}` : 'Loading...'}</div></div>
                                 </div>
                             </div>
 
@@ -207,11 +155,11 @@ export default function ProfilePage () {
                                 <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100 shadow-sm relative overflow-hidden group">
                                     <h3 className="font-bold text-blue-600 text-xs uppercase mb-2">Testnet Faucet</h3>
                                     <h4 className="text-xl font-black text-aid-dark mb-2">Need Test Money?</h4>
-                                    <button onClick={handleFaucet} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center gap-2"><Coins size={18} />Get 1,000,000 IDRX</button>
+                                    <button onClick={handleFaucet} disabled={isFaucetLoading} className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">{isFaucetLoading ? <Loader2 className="animate-spin" size={18} /> : <Coins size={18} />}Get 1,000,000 IDRX</button>
                                 </div>
                                 <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex flex-col justify-center space-y-4">
-                                    <div className="flex justify-between items-center"><span className="font-bold text-gray-700">Total Donated</span><span className="font-black text-xl text-aid-dark">IDRX {Number(formatEther(totalDonated)).toLocaleString('id-ID')}</span></div>
-                                    <div className="flex justify-between items-center"><span className="font-bold text-gray-700">Total Received</span><span className="font-black text-xl text-green-600">IDRX {Number(formatEther(totalReceived)).toLocaleString('id-ID')}</span></div>
+                                    <div className="flex justify-between items-center"><span className="font-bold text-gray-700">Total Donated</span><span className="font-black text-xl text-aid-dark">IDRX {totalDonated.toLocaleString('id-ID')}</span></div>
+                                    <div className="flex justify-between items-center"><span className="font-bold text-gray-700">Total Received</span><span className="font-black text-xl text-green-600">IDRX {totalReceived.toLocaleString('id-ID')}</span></div>
                                 </div>
                             </div>
 
@@ -231,7 +179,7 @@ export default function ProfilePage () {
                                                     <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${activeTab === 'sent' ? 'bg-red-50 text-red-500' : 'bg-green-50 text-green-500'}`}>{activeTab === 'sent' ? <ArrowUpRight size={24} /> : <ArrowDownLeft size={24} />}</div>
                                                     <div><p className="font-bold text-aid-dark line-clamp-1">{item.campaignTitle}</p><div className="text-xs text-gray-500 font-mono mt-1">{item.otherPartyLabel}: {item.otherParty.slice(0,6)}...{item.otherParty.slice(-4)}</div></div>
                                                 </div>
-                                                <div className="text-right pl-16 md:pl-0"><div className={`font-black text-lg ${activeTab === 'sent' ? 'text-aid-dark' : 'text-green-600'}`}>{activeTab === 'sent' ? '-' : '+'} IDRX {Number(formatEther(item.amount)).toLocaleString('id-ID')}</div><div className="text-[10px] text-gray-400 uppercase">{new Date(Number(item.timestamp) * 1000).toLocaleString()}</div></div>
+                                                <div className="text-right pl-16 md:pl-0"><div className={`font-black text-lg ${activeTab === 'sent' ? 'text-aid-dark' : 'text-green-600'}`}>{activeTab === 'sent' ? '-' : '+'} IDRX {item.amount.toLocaleString('id-ID')}</div><div className="text-[10px] text-gray-400 uppercase">{new Date(item.timestamp).toLocaleString()}</div></div>
                                             </div>
                                         ))}
                                     </div>

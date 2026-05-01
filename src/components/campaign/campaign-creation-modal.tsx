@@ -3,11 +3,21 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, CheckCircle2, UploadCloud, Video as VideoIcon, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { parseEther } from 'viem';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { FACTORY_ADDRESS, FACTORY_ABI } from '~/constants/contracts';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { PublicKey, Transaction, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
+import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { Program, AnchorProvider, BN } from '@coral-xyz/anchor';
+import {
+  PROGRAM_ID,
+  IDRX_MINT,
+  AID_BEACON_IDL,
+  type AidBeaconIdl,
+  findCampaignPda,
+  findCampaignVaultPda,
+  findConfigPda,
+} from '~/constants/contracts';
 import Button from '../ui/button';
 import { uploadJSONToIPFS } from '~/utils/pinata';
 import { uploadVideoFile } from '~/lib/video';
@@ -48,15 +58,11 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
     },
   });
 
-  const { data: hash, writeContract, isPending: isWalletConfirming, error: writeError } = useWriteContract();
-  
-  const { isLoading: isTransactionConfirming, isSuccess: isTransactionSuccess, error: receiptError } = useWaitForTransactionReceipt({
-    hash,
-    query: {
-        enabled: !!hash,
-        refetchInterval: 1000, 
-    }
-  });
+  const { publicKey, signTransaction } = useWallet();
+  const { connection } = useConnection();
+  const [isCreatingOnChain, setIsCreatingOnChain] = useState(false);
+  const [onChainSuccess, setOnChainSuccess] = useState(false);
+  const [createError, setCreateError] = useState<Error | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,18 +166,72 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
           return;
         }
 
-        // step 2: call blockchain
-        writeContract({
-            address: FACTORY_ADDRESS,
-            abi: FACTORY_ABI,
-            functionName: 'createCampaign',
-            args: [
+        // step 2: call Solana blockchain
+        if (!publicKey || !signTransaction) {
+          toast.error('Wallet not connected');
+          setUploadStep('idle');
+          return;
+        }
+
+        setIsCreatingOnChain(true);
+        try {
+          const campaignId = new BN(Date.now());
+          const [configPda] = findConfigPda();
+          const [campaignPda] = findCampaignPda(publicKey, BigInt(campaignId.toString()));
+          const [vaultPda] = findCampaignVaultPda(campaignPda);
+
+          const provider = new AnchorProvider(
+            connection,
+            { publicKey, signTransaction } as never,
+            { commitment: 'confirmed' }
+          );
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const program = new Program(AID_BEACON_IDL, provider) as any;
+
+          const tx = new Transaction();
+
+          tx.add(
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+            await program.methods
+              .create_campaign(
+                campaignId,
                 formData.title,
-                `ipfs://${ipfsHash}`,
-                parseEther(formData.targetAmount),
-                formData.category
-            ],
-        });
+                formData.description,
+                formData.category,
+                new BN(Number(formData.targetAmount) * 1e9)
+              )
+              .accounts({
+                creator: publicKey,
+                campaign: campaignPda,
+                config: configPda,
+                campaign_vault: vaultPda,
+                idrx_mint: IDRX_MINT,
+                token_program: TOKEN_PROGRAM_ID,
+                system_program: PublicKey.default,
+                rent: SYSVAR_RENT_PUBKEY,
+              })
+              .instruction()
+          );
+
+          tx.feePayer = publicKey;
+          tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+
+          const signed = await signTransaction(tx);
+          const sig = await connection.sendRawTransaction(signed.serialize());
+          await connection.confirmTransaction(sig, 'confirmed');
+
+          setOnChainSuccess(true);
+          toast.success('Campaign Created Successfully!', {
+            description: 'Your campaign is now live on Solana devnet.',
+          });
+        } catch (error) {
+          console.error(error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          setCreateError(error instanceof Error ? error : new Error(errorMessage));
+          toast.error('On-chain creation failed', { description: errorMessage });
+        } finally {
+          setIsCreatingOnChain(false);
+        }
 
     } catch (error) {
         console.error(error);
@@ -194,40 +254,35 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
   }, [onClose]);
 
   useEffect(() => {
-    if (writeError) {
-        toast.error('Transaction Failed', {
-            description: writeError.message.slice(0, 100) + (writeError.message.length > 100 ? '...' : ''),
-        });
+    if (createError) {
+      toast.error('Transaction Failed', {
+        description: createError.message.slice(0, 100) + (createError.message.length > 100 ? '...' : ''),
+      });
     }
-    if (receiptError) {
-        toast.error('Transaction Receipt Failed', {
-            description: receiptError.message
-        });
-    }
-  }, [writeError, receiptError]);
+  }, [createError]);
 
   useEffect(() => {
-    if (isTransactionSuccess) {
-        toast.success('Campaign Created Successfully!', {
-            description: 'Your campaign is now live on the blockchain.'
-        });
+    if (onChainSuccess) {
+      toast.success('Campaign Created Successfully!', {
+        description: 'Your campaign is now live on Solana devnet.',
+      });
 
-        let timer: NodeJS.Timeout;
+      let timer: ReturnType<typeof setTimeout>;
 
-        if (campaignType === 'live' && generatedMeetingId) {
-             timer = setTimeout(() => {
-                router.push(`/live/studio/${generatedMeetingId}`);
-                onClose();
-             }, 1500);
-        } else {
-             timer = setTimeout(() => {
-                resetForm();
-             }, 3000);
-        }
+      if (campaignType === 'live' && generatedMeetingId) {
+        timer = setTimeout(() => {
+          void router.push(`/live/studio/${generatedMeetingId}`);
+          onClose();
+        }, 1500);
+      } else {
+        timer = setTimeout(() => {
+          resetForm();
+        }, 3000);
+      }
 
-        return () => clearTimeout(timer);
+      return () => clearTimeout(timer);
     }
-  }, [isTransactionSuccess, campaignType, generatedMeetingId, router, onClose, resetForm]);
+  }, [onChainSuccess, campaignType, generatedMeetingId, router, onClose, resetForm]);
 
   useEffect(() => {
     if (uploadStep === 'uploading_video') {
@@ -280,7 +335,7 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto px-6 py-5">
-              {isTransactionSuccess ? (
+              {onChainSuccess ? (
                  <div className="text-center py-12">
                     <motion.div 
                       initial={{ scale: 0 }}
@@ -473,34 +528,34 @@ const CampaignCreationModal: React.FC<CampaignCreationModalProps> = ({ isOpen, o
             </div>
 
             {/* Footer / Submit Button */}
-            {!isTransactionSuccess && (
+            {!onChainSuccess && (
               <div className="flex-shrink-0 px-6 py-4 border-t border-gray-100 bg-gray-50/50 rounded-b-3xl">
                 <Button
                   type="submit"
                   variant="primary"
                   className="w-full justify-center py-3 text-base font-semibold shadow-lg shadow-aid-green/20"
-                  disabled={uploadStep !== 'idle' || isWalletConfirming || isTransactionConfirming}
+                  disabled={uploadStep !== 'idle' || isCreatingOnChain}
                   onClick={handleSubmit}
                 >
                   {uploadStep === 'uploading_video' ? (
                       <>
                       <Loader2 className="animate-spin mr-2" size={18} />
-                      {campaignType === 'live' ? 'Creating Live Room...' : `Uploading Video (${Math.round(uploadProgress * 100)}%)`}
+                      Uploading Video...
                       </>
                   ) : uploadStep === 'uploading_metadata' ? (
                       <>
                       <Loader2 className="animate-spin mr-2" size={18} />
                       Pinning to IPFS...
                       </>
-                  ) : isWalletConfirming || uploadStep === 'blockchain' ? (
+                  ) : isCreatingOnChain || uploadStep === 'blockchain' ? (
                       <>
                       <Loader2 className="animate-spin mr-2" size={18} />
                       Confirm in Wallet...
                       </>
-                  ) : isTransactionConfirming ? (
+                  ) : isCreatingOnChain ? (
                     <>
                       <Loader2 className="animate-spin mr-2" size={18} />
-                      Deploying Contract...
+                      Deploying on Solana...
                     </>
                   ) : (
                       "Create Campaign"

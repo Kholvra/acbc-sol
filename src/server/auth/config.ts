@@ -1,6 +1,7 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import { type NextAuthConfig } from "next-auth";
-import { verifyMessage } from "viem";
+import { PublicKey } from "@solana/web3.js";
+import nacl from "tweetnacl";
 
 import { db } from "~/server/db";
 
@@ -17,7 +18,7 @@ const NONCE_EXPIRY_MS = 5 * 60 * 1000;
  * AidBeacon Authentication
  *
  * Sign this message to authenticate.
- * Wallet: 0x1234...abcd
+ * Wallet: Abc123...xyz
  * Timestamp: 1709571234567
  * ```
  *
@@ -40,10 +41,25 @@ function extractTimestamp(message: string): number | null {
   return Number(match[1]);
 }
 
+function verifySolanaSignature(
+  message: string,
+  signatureBase64: string,
+  publicKeyBase58: string
+): boolean {
+  try {
+    const publicKey = new PublicKey(publicKeyBase58);
+    const messageBytes = new TextEncoder().encode(message);
+    const signature = Buffer.from(signatureBase64, "base64");
+    return nacl.sign.detached.verify(messageBytes, signature, publicKey.toBytes());
+  } catch {
+    return false;
+  }
+}
+
 export const authConfig = {
   providers: [
     CredentialsProvider({
-      name: "Web3 Wallet",
+      name: "Solana Wallet",
       credentials: {
         message: { label: "Message", type: "text" },
         signature: { label: "Signature", type: "text" },
@@ -57,9 +73,8 @@ export const authConfig = {
        * 1. Validate that all required fields are present
        * 2. Extract and validate the timestamp nonce from the message
        * 3. Rebuild the expected message and compare with the received message
-       * 4. Use viem's verifyMessage to recover the signer from the signature
-       *    and verify it matches the claimed address
-       * 5. Look up or create the user in the database
+       * 4. Use tweetnacl to verify the Solana signature
+       * 5. Look up or create the user in the database (Solana addresses are case-sensitive, keep as-is)
        * 6. Return the user object (NextAuth serializes it into the JWT)
        */
       async authorize(credentials) {
@@ -88,26 +103,15 @@ export const authConfig = {
           return null;
         }
 
-        try {
-          const isValid = await verifyMessage({
-            address: address as `0x${string}`,
-            message,
-            signature: signature as `0x${string}`,
-          });
-
-          if (!isValid) return null;
-        } catch {
-          return null;
-        }
-
-        const normalizedAddress = address.toLowerCase();
+        const isValid = verifySolanaSignature(message, signature, address);
+        if (!isValid) return null;
 
         let user: { id: string; address: string; role: string | null } | null = await db.user.findUnique({
-          where: { address: normalizedAddress },
+          where: { address },
         });
 
         user ??= await db.user.create({
-            data: { address: normalizedAddress },
+            data: { address },
           });
 
         return {

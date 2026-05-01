@@ -5,12 +5,9 @@ import dynamic from 'next/dynamic';
 import { Map as MapIcon, MapPin, Loader2 } from 'lucide-react';
 import TikTokLayout from '~/components/layout/tiktok-layout';
 import CampaignCreationModal from '~/components/campaign/campaign-creation-modal';
-import { useReadContract, useReadContracts } from 'wagmi';
-import { FACTORY_ADDRESS, FACTORY_ABI, CAMPAIGN_ABI } from '~/constants/contracts';
-import { fetchJSONFromIPFS } from '~/utils/pinata';
-import { formatEther } from 'viem';
 import { getStandardProvinceName } from '~/utils/provinceNames';
 import type { IndonesiaGeoJson } from '~/types/map';
+import { api } from '~/trpc/react';
 
 const MapView = dynamic(() => import('~/components/explore/map-view'), {
   ssr: false,
@@ -32,90 +29,33 @@ export default function ExplorePage() {
     activeProvincesCount: 0,
   });
 
-  const { data: campaignAddresses } = useReadContract({
-    address: FACTORY_ADDRESS,
-    abi: FACTORY_ABI,
-    functionName: 'getCampaigns',
-    query: { refetchInterval: 10000 },
-  });
-
-  const { data: campaignsData } = useReadContracts({
-    contracts: campaignAddresses?.flatMap((addr) => [
-      { address: addr, abi: CAMPAIGN_ABI, functionName: 'metadata' },
-      { address: addr, abi: CAMPAIGN_ABI, functionName: 'totalRaised' },
-      { address: addr, abi: CAMPAIGN_ABI, functionName: 'isActive' },
-    ]) ?? [],
-    query: {
-      enabled: !!campaignAddresses && campaignAddresses.length > 0,
-      refetchInterval: 10000,
-    },
-  });
+  const { data: campaigns, isLoading: isCampaignsLoading } = api.campaign.getAllCampaigns.useQuery(
+    undefined,
+    { refetchInterval: 10000 }
+  );
 
   useEffect(() => {
-    const fetchActiveCampaigns = async () => {
-      if (!campaignsData || !campaignAddresses) return;
+    if (!campaigns) return;
 
-      const counts: Record<string, number> = {};
-      let totalActive = 0;
-      let totalIdrxRaised = 0;
-      const stride = 3;
+    const counts: Record<string, number> = {};
+    let totalActive = 0;
 
-      // Filter and prepare tasks for IPFS fetching
-      const campaignTasks: { addr: `0x${string}`; description: string }[] = [];
-
-      for (let i = 0; i < campaignAddresses.length; i++) {
-        const addr = campaignAddresses[i];
-        if (!addr) continue; // Type guard: skip if undefined
-
-        const metaResult = campaignsData[i * stride];
-        const raisedResult = campaignsData[i * stride + 1];
-        const activeResult = campaignsData[i * stride + 2];
-
-        if (metaResult?.status !== 'success' || raisedResult?.status !== 'success') continue;
-
-        const isActive = activeResult?.status === 'success' && (activeResult.result as boolean);
-        if (!isActive) continue;
-
-        const [, description, targetAmount] = metaResult.result as [string, string, bigint, string];
-        const totalRaised = raisedResult.result as bigint;
-
-        if (totalRaised >= targetAmount) continue;
-
-        totalActive++;
-        totalIdrxRaised += Number(formatEther(totalRaised));
-
-        if (description?.startsWith('ipfs://')) {
-          campaignTasks.push({ addr, description });
-        }
+    for (const campaign of campaigns) {
+      // For now, consider all DB campaigns as active (on-chain state sync will refine)
+      totalActive++;
+      if (campaign.province) {
+        const stdName = getStandardProvinceName(campaign.province);
+        counts[stdName] = (counts[stdName] ?? 0) + 1;
       }
+    }
 
-      // Fetch IPFS metadata in parallel
-      const results = await Promise.allSettled(
-        campaignTasks.map((task) => fetchJSONFromIPFS(task.description))
-      );
-
-      results.forEach((result) => {
-        if (result.status === 'fulfilled' && result.value) {
-          const data = result.value; // Type is now CampaignIPFSMetadata!
-          const province = data.properties?.province;
-
-          if (province) {
-            const stdName = getStandardProvinceName(province);
-            counts[stdName] = (counts[stdName] ?? 0) + 1;
-          }
-        }
-      });
-
-      setProvinceCampaignCounts(counts);
-      setStats({
-        activeCampaigns: totalActive,
-        totalRaised: totalIdrxRaised,
-        activeProvincesCount: Object.keys(counts).length,
-      });
-    };
-
-    void fetchActiveCampaigns();
-  }, [campaignsData, campaignAddresses]);
+    setProvinceCampaignCounts(counts);
+    setStats({
+      activeCampaigns: totalActive,
+      totalRaised: 0, // Will be populated from on-chain reads in a real implementation
+      activeProvincesCount: Object.keys(counts).length,
+    });
+  }, [campaigns]);
 
   useEffect(() => {
     fetch('/data/indonesia-provinces.geojson')
