@@ -113,19 +113,28 @@ export const authConfig = {
         const isValid = verifySolanaSignature(message, signature, address);
         if (!isValid) return null;
 
-        let user: { id: string; address: string; role: string | null } | null = await db.user.findUnique({
-          where: { address },
-        });
-
-        user ??= await db.user.create({
-            data: { address },
+        try {
+          let user: { id: string; address: string; role: string | null } | null = await db.user.findUnique({
+            where: { address },
           });
 
-        return {
-          id: user.id,
-          address: user.address,
-          role: user.role ?? null,
-        } as const;
+          user ??= await db.user.create({
+              data: { address },
+            });
+
+          return {
+            id: user.id,
+            address: user.address,
+            role: user.role ?? null,
+          } as const;
+        } catch (dbError) {
+          console.error("[auth] Database error during sign-in:", dbError);
+          throw new Error(
+            dbError instanceof Error
+              ? `Database error: ${dbError.message}`
+              : "Database unavailable"
+          );
+        }
       },
     }),
   ],
