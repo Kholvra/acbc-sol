@@ -89,30 +89,50 @@ export const authConfig = {
         const signature = credentials?.signature as string | undefined;
         const address = credentials?.address as string | undefined;
 
+        console.log("[auth] authorize called", {
+          hasMessage: !!message,
+          hasSignature: !!signature,
+          hasAddress: !!address,
+          address: address?.slice(0, 8),
+        });
+
         if (
           typeof message !== "string" ||
           typeof signature !== "string" ||
           typeof address !== "string"
         ) {
+          console.log("[auth] FAIL: missing credentials (types)");
           return null;
         }
 
         const timestamp = extractTimestamp(message);
-        if (timestamp === null) return null;
+        if (timestamp === null) {
+          console.log("[auth] FAIL: no timestamp in message");
+          return null;
+        }
 
         const now = Date.now();
-        if (Math.abs(now - timestamp) > NONCE_EXPIRY_MS) {
+        const ageMs = Math.abs(now - timestamp);
+        console.log("[auth] timestamp age:", ageMs, "ms");
+        if (ageMs > NONCE_EXPIRY_MS) {
+          console.log("[auth] FAIL: timestamp expired (age:", ageMs, "ms, max:", NONCE_EXPIRY_MS, "ms)");
           return null;
         }
 
         const expectedMessage = buildExpectedMessage(address, timestamp);
         if (message !== expectedMessage) {
+          console.log("[auth] FAIL: message mismatch. Expected length:", expectedMessage.length, "Got:", message.length);
           return null;
         }
 
+        console.log("[auth] verifying signature...");
         const isValid = verifySolanaSignature(message, signature, address);
-        if (!isValid) return null;
+        if (!isValid) {
+          console.log("[auth] FAIL: signature verification failed. Sig length:", signature.length);
+          return null;
+        }
 
+        console.log("[auth] signature valid, querying DB...");
         try {
           let user: { id: string; address: string; role: string | null } | null = await db.user.findUnique({
             where: { address },
@@ -122,13 +142,14 @@ export const authConfig = {
               data: { address },
             });
 
+          console.log("[auth] SUCCESS: user", user.id, "role:", user.role ?? "null");
           return {
             id: user.id,
             address: user.address,
             role: user.role ?? null,
           } as const;
         } catch (dbError) {
-          console.error("[auth] Database error during sign-in:", dbError);
+          console.error("[auth] FAIL: database error:", dbError);
           return null;
         }
       },
