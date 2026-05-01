@@ -14,19 +14,23 @@ const DashboardPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const { connected } = useWallet();
 
-  // Layout guarantees auth; profile query always enabled
   const {
     data: profile,
-    isLoading: isProfileLoading,
+    isError: profileError,
   } = api.user.getProfile.useQuery(undefined, {
+    enabled: connected,
     retry: false,
+    staleTime: 30000,
   });
 
   const {
     data: campaigns,
     isLoading: isCampaignsLoading,
+    isError: campaignsError,
   } = api.campaign.getAllCampaigns.useQuery(undefined, {
     refetchInterval: 10000,
+    retry: false,
+    staleTime: 30000,
   });
 
   const [expiredIds, setExpiredIds] = useState<Set<string>>(new Set());
@@ -35,38 +39,23 @@ const DashboardPage = () => {
   useEffect(() => {
     const checkExpirations = async () => {
       if (!campaigns) return;
-
       setIsCheckingExpiration(true);
       const expired = new Set<string>();
-
       for (const campaign of campaigns) {
         if (campaign.endDate && isCampaignExpired(campaign.endDate.toISOString())) {
           expired.add(campaign.id);
         }
       }
-
       setExpiredIds(expired);
       setIsCheckingExpiration(false);
     };
-
     void checkExpirations();
   }, [campaigns]);
 
-  const filteredCampaigns = campaigns?.filter((c) => {
-    if (expiredIds.has(c.id)) return false;
-    return true;
-  });
+  const filteredCampaigns = campaigns?.filter((c) => !expiredIds.has(c.id));
 
-  // show loading while fetching profile
-  if (isProfileLoading) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-aid-offwhite">
-        <Loader2 className="animate-spin text-aid-green" size={48} />
-      </div>
-    );
-  }
+  const showDbError = profileError || campaignsError;
 
-  // Wallet must be connected for Web3 interactions
   if (!connected) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-aid-offwhite">
@@ -80,6 +69,11 @@ const DashboardPage = () => {
   return (
     <TikTokLayout onOpenCreate={() => setIsModalOpen(true)}>
       <div className="relative h-screen w-full overflow-hidden">
+        {showDbError && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 bg-amber-50 border border-amber-200 text-amber-800 px-4 py-2 rounded-xl text-sm font-medium shadow">
+            Database unreachable — some features limited
+          </div>
+        )}
         <div className="relative z-10 h-full w-full overflow-y-scroll snap-y snap-mandatory scroll-smooth hide-scrollbar bg-transparent">
           {isCampaignsLoading || isCheckingExpiration ? (
             <div className="h-full w-full flex items-center justify-center snap-start">
