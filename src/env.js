@@ -8,13 +8,13 @@ export const env = createEnv({
    */
   server: {
     AUTH_SECRET: z.string().optional(),
-    DATABASE_URL: z.string(),
+    DATABASE_URL: z.string().optional(),
     DIRECT_URL: z.string().optional(),
-    GROQ_API_KEY: z.string(),
+    GROQ_API_KEY: z.string().optional(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
       .default("development"),
-    VIDEOSDK_SECRET_KEY: z.string(),
+    VIDEOSDK_SECRET_KEY: z.string().optional(),
   },
 
   /**
@@ -23,9 +23,9 @@ export const env = createEnv({
    * `NEXT_PUBLIC_`.
    */
   client: {
-    NEXT_PUBLIC_PINATA_JWT: z.string(),
-    NEXT_PUBLIC_GATEWAY_URL: z.string(),
-    NEXT_PUBLIC_VIDEOSDK_API_KEY: z.string(),
+    NEXT_PUBLIC_PINATA_JWT: z.string().optional(),
+    NEXT_PUBLIC_GATEWAY_URL: z.string().default("https://gateway.pinata.cloud"),
+    NEXT_PUBLIC_VIDEOSDK_API_KEY: z.string().optional(),
     NEXT_PUBLIC_PROGRAM_ID: z.string(),
     NEXT_PUBLIC_IDRX_MINT: z.string(),
     NEXT_PUBLIC_SOLANA_RPC_URL: z.string().default("https://api.devnet.solana.com"),
@@ -60,10 +60,12 @@ export const env = createEnv({
    */
   emptyStringAsUndefined: true,
   onValidationError: (errors) => {
-    console.error("Environment variable validation failed:");
-    for (const [key, error] of Object.entries(errors)) {
-      console.error(`  ${key}: ${error}`);
-    }
-    throw new Error("Invalid environment variables");
+    const messages = Object.entries(errors).map(
+      ([key, error]) => `  ${key}: ${error}`
+    );
+    const msg =
+      "Environment variable validation failed:\n" + messages.join("\n");
+    console.error(msg);
+    throw new Error(msg);
   },
 });
