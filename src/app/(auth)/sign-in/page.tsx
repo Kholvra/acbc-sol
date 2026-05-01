@@ -94,9 +94,9 @@ const SignInPage: React.FC = () => {
       } else {
         toast.error(message);
       }
-      
-      setIsAuthenticating(false);
       // don't reset ref - let user manually retry via button
+    } finally {
+      setIsAuthenticating(false);
     }
   }, [signMessage, status, profile, utils]);
 
