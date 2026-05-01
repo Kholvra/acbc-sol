@@ -5,6 +5,11 @@ import nacl from "tweetnacl";
 
 import { db } from "~/server/db";
 
+// crash early if AUTH_SECRET is missing — NextAuth v5 needs it for JWT signing
+if (!process.env.AUTH_SECRET) {
+  throw new Error("Missing AUTH_SECRET environment variable. Set it in Vercel: Settings > Environment Variables.");
+}
+
 /**
  * Timestamp nonce validity window: 5 min.
  */
@@ -57,6 +62,8 @@ function verifySolanaSignature(
 }
 
 export const authConfig = {
+  secret: process.env.AUTH_SECRET,
+  trustHost: true,
   providers: [
     CredentialsProvider({
       name: "Solana Wallet",
