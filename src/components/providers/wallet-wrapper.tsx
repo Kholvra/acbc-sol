@@ -1,9 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 
 type WalletWrapperProps = {
@@ -12,16 +12,22 @@ type WalletWrapperProps = {
   withWalletAggregator?: boolean;
 };
 
+declare global {
+  var __WALLET_ADDRESS__: string | undefined;
+}
+
 export default function WalletWrapper({ className, text }: WalletWrapperProps) {
   const { connected, publicKey, disconnect } = useWallet();
-  const { data: session } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    globalThis.__WALLET_ADDRESS__ = connected && publicKey ? publicKey.toBase58() : undefined;
+  }, [connected, publicKey]);
 
   const handleDisconnect = async () => {
     await disconnect();
-    if (session) {
-      await signOut({ redirect: false });
-    }
-    window.location.reload();
+    globalThis.__WALLET_ADDRESS__ = undefined;
+    location.reload();
   };
 
   return (
@@ -34,7 +40,9 @@ export default function WalletWrapper({ className, text }: WalletWrapperProps) {
             </span>
           </div>
           <button
-            onClick={handleDisconnect}
+            onClick={() => {
+              void handleDisconnect();
+            }}
             className="p-2 hover:bg-red-50 text-red-500 rounded-full transition-colors"
             aria-label="Disconnect wallet"
           >
@@ -42,9 +50,7 @@ export default function WalletWrapper({ className, text }: WalletWrapperProps) {
           </button>
         </div>
       ) : (
-        <WalletMultiButton className="bg-aid-green text-white hover:bg-aid-dark transition-colors rounded-full px-4 py-2 font-bold font-body !bg-aid-green !text-white !hover:bg-aid-dark !font-bold !font-body">
-          {text ?? 'Connect Wallet'}
-        </WalletMultiButton>
+        <WalletMultiButton className="bg-aid-green text-white hover:bg-aid-dark transition-colors rounded-full px-4 py-2 font-bold font-body !bg-aid-green !text-white !hover:bg-aid-dark !font-bold !font-body" />
       )}
     </div>
   );

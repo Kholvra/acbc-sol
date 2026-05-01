@@ -10,8 +10,11 @@ import { Prisma } from "@prisma/client";
 
 export const kycRouter = createTRPCRouter({
   getStatus: protectedProcedure.query(async ({ ctx }) => {
+    const user = await ctx.db.user.findUnique({ where: { address: ctx.walletAddress }, select: { id: true } });
+    if (!user) return { hasDocument: false, document: null };
+
     const document = await ctx.db.kycDocument.findUnique({
-      where: { userId: ctx.session.user.id },
+      where: { userId: user.id },
     });
 
     return {
@@ -44,9 +47,12 @@ export const kycRouter = createTRPCRouter({
       const { name: extractedName, nik: extractedNik } = validated.data;
 
       try {
+        const user = await ctx.db.user.findUnique({ where: { address: ctx.walletAddress }, select: { id: true } });
+        if (!user) throw new TRPCError({ code: "UNAUTHORIZED" });
+
         await ctx.db.kycDocument.create({
           data: {
-            userId: ctx.session.user.id,
+            userId: user.id,
             documentType: "KTP",
             extractedName,
             extractedNik,

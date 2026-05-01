@@ -6,7 +6,6 @@ import { Users, Megaphone, ShieldAlert, Loader2 } from 'lucide-react';
 import Button from '~/components/ui/button';
 import { toast } from 'sonner';
 import { api } from '~/trpc/react';
-import { useSession } from 'next-auth/react';
 
 interface RoleSelectionModalProps {
   isOpen: boolean;
@@ -17,31 +16,22 @@ interface RoleSelectionModalProps {
 
 export const RoleSelectionModal = ({ isOpen, onSuccess, currentRole, hasKyc }: RoleSelectionModalProps) => {
   const [showKycConfirm, setShowKycConfirm] = useState(false);
-  const { update: updateSession } = useSession();
   const router = useRouter();
   const utils = api.useUtils();
 
   const updateProfileMutation = api.user.updateProfile.useMutation({
     onMutate: async (newData) => {
-      // Cancel outgoing refetches so they don't overwrite optimistic update
       await utils.user.getProfile.cancel();
-
-      // Snapshot current cache value for rollback
       const previous = utils.user.getProfile.getData();
-
-      // Optimistically update cache immediately
       utils.user.getProfile.setData(undefined, {
         hasRole: true,
         role: newData.role,
         hasKyc: previous?.hasKyc ?? false,
         kycStatus: previous?.kycStatus ?? null,
       });
-
-      // Return context for potential rollback
       return { previous };
     },
     onError: (error, _newData, context) => {
-      // Rollback to previous value on error
       if (context?.previous) {
         utils.user.getProfile.setData(undefined, context.previous);
       }
@@ -49,20 +39,9 @@ export const RoleSelectionModal = ({ isOpen, onSuccess, currentRole, hasKyc }: R
     },
     onSuccess: async (data) => {
       toast.success(`Role selected as ${data.role}`);
-
       onSuccess();
-
-      // Update session with new role
-      await updateSession({
-        user: {
-          role: data.role,
-        },
-      });
-
-      // Invalidate to sync with server (cache already has correct value)
       await utils.user.getProfile.invalidate();
 
-      // Smart redirect: check KYC status for CAMPAIGNER
       if (data.role === 'CAMPAIGNER') {
         const currentProfile = utils.user.getProfile.getData();
         if (currentProfile?.hasKyc) {
@@ -80,7 +59,6 @@ export const RoleSelectionModal = ({ isOpen, onSuccess, currentRole, hasKyc }: R
 
   const handleRoleSelect = (role: 'DONATUR' | 'CAMPAIGNER') => {
     if (role === 'CAMPAIGNER') {
-      // Skip KYC confirmation if user already has verified KYC
       if (hasKyc) {
         handleConfirmRole('CAMPAIGNER');
       } else {
@@ -94,7 +72,7 @@ export const RoleSelectionModal = ({ isOpen, onSuccess, currentRole, hasKyc }: R
   const handleConfirmRole = (role: 'DONATUR' | 'CAMPAIGNER') => {
     updateProfileMutation.mutate({ 
       role,
-      name: "New User" // Default placeholder name for first-time onboarding
+      name: "New User"
     });
   };
 
@@ -104,7 +82,6 @@ export const RoleSelectionModal = ({ isOpen, onSuccess, currentRole, hasKyc }: R
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
       <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         
-        {/* Header */}
         <div className="bg-gradient-to-r from-aid-green/20 to-aid-primary/20 p-6 relative">
           <h2 className="text-2xl font-heading font-black text-aid-dark text-center">
             {showKycConfirm ? "Identity Verification" : "Switch Your Path"}
@@ -116,11 +93,9 @@ export const RoleSelectionModal = ({ isOpen, onSuccess, currentRole, hasKyc }: R
           </p>
         </div>
 
-        {/* Content */}
         <div className="p-6 md:p-8">
           {!showKycConfirm ? (
             <div className="space-y-4">
-              {/* Donatur Option */}
               <button
                 onClick={() => handleRoleSelect('DONATUR')}
                 className={`w-full text-left p-5 rounded-2xl border-2 transition-all group relative overflow-hidden ${
@@ -151,7 +126,6 @@ export const RoleSelectionModal = ({ isOpen, onSuccess, currentRole, hasKyc }: R
                 </div>
               </button>
 
-              {/* Campaigner Option */}
               <button
                 onClick={() => handleRoleSelect('CAMPAIGNER')}
                 className={`w-full text-left p-5 rounded-2xl border-2 transition-all group relative overflow-hidden ${

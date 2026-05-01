@@ -132,12 +132,15 @@ export const invoiceRouter = createTRPCRouter({
         });
       }
 
+      const user = await ctx.db.user.findUnique({ where: { address: ctx.walletAddress }, select: { id: true } });
+      const verifiedBy = user?.id ?? ctx.walletAddress;
+
       const invoice = await ctx.db.invoice.update({
         where: { id: input.invoiceId },
         data: {
           status: "VERIFIED",
           verifiedAt: new Date(),
-          verifiedBy: ctx.session.user.id,
+          verifiedBy,
           notes: input.notes,
         },
         include: { attachments: true },

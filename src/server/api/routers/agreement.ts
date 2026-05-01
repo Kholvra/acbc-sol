@@ -199,12 +199,15 @@ export const agreementRouter = createTRPCRouter({
         });
       }
 
+      const user = await ctx.db.user.findUnique({ where: { address: ctx.walletAddress }, select: { id: true } });
+      const approvedBy = user?.id ?? ctx.walletAddress;
+
       const agreement = await ctx.db.purchaseAgreement.update({
         where: { id: input.agreementId },
         data: {
           status: "APPROVED",
           approvedAt: new Date(),
-          approvedBy: ctx.session.user.id,
+          approvedBy,
         },
         include: { items: true },
       });
