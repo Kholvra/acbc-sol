@@ -50,6 +50,25 @@ const SignInPage: React.FC = () => {
     setIsMounted(true);
   }, []);
 
+  // browser-native Uint8Array -> base64 (no Buffer dependency)
+  const toBase64 = (bytes: Uint8Array): string => {
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]!);
+    }
+    return btoa(binary);
+  };
+
+  // wrap a promise with a timeout — used to detect hung signMessage (Phantom EVM conflict)
+  const withTimeout = <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout: ${label} took longer than ${ms / 1000}s`)), ms)
+      ),
+    ]);
+  };
+
   const handleSignIn = useCallback(async (walletAddress: string) => {
     // skip if no address or already authenticated with profile
     if (!walletAddress || (status === 'authenticated' && profile)) {
@@ -67,32 +86,51 @@ const SignInPage: React.FC = () => {
       const timestamp = Date.now();
       const message = buildAuthMessage(walletAddress, timestamp);
       const messageBytes = new TextEncoder().encode(message);
-      const signatureBytes = await signMessage(messageBytes);
-      const signature = Buffer.from(signatureBytes).toString('base64');
 
-      const result = await signIn('credentials', {
-        message,
-        signature,
-        address: walletAddress,
-        redirect: false,
-      });
+      // 60s timeout — Phantom can hang indefinitely when EVM injection conflicts
+      const signatureBytes = await withTimeout(signMessage(messageBytes), 60000, 'signMessage');
+
+      if (!signatureBytes || signatureBytes.length === 0) {
+        throw new Error('Wallet returned an empty signature');
+      }
+
+      const signature = toBase64(signatureBytes);
+
+      console.log('[sign-in] signature obtained, calling NextAuth signIn...');
+
+      const result = await withTimeout(
+        signIn('credentials', {
+          message,
+          signature,
+          address: walletAddress,
+          redirect: false,
+        }),
+        30000,
+        'NextAuth signIn'
+      );
 
       if (result?.error) {
         throw new Error(result.error);
       }
 
+      console.log('[sign-in] auth successful, invalidating profile...');
       toast.success('Successfully authenticated!');
 
       // invalidate profile query to ensure fresh data
       await utils.user.getProfile.invalidate();
 
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Authentication failed';
-      
-      if (message.includes('User rejected') || message.includes('cancelled')) {
+      const msg = error instanceof Error ? error.message : 'Authentication failed';
+      console.error('[sign-in] error:', msg);
+
+      if (msg.includes('User rejected') || msg.includes('cancelled')) {
         toast.error('Signature cancelled');
+      } else if (msg.includes('Timeout')) {
+        toast.error('Wallet request timed out. Try refreshing the page and disabling other wallet extensions.');
+      } else if (msg.includes('CredentialsSignin')) {
+        toast.error('Authentication failed. Please try again.');
       } else {
-        toast.error(message);
+        toast.error(msg);
       }
       // don't reset ref - let user manually retry via button
     } finally {
