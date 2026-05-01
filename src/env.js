@@ -7,12 +7,9 @@ export const env = createEnv({
    * isn't built with invalid env vars.
    */
   server: {
-    AUTH_SECRET:
-      process.env.NODE_ENV === "production"
-        ? z.string()
-        : z.string().optional(),
-    DATABASE_URL: z.string().url(),
-    DIRECT_URL: z.string().url().optional(),
+    AUTH_SECRET: z.string().optional(),
+    DATABASE_URL: z.string(),
+    DIRECT_URL: z.string().optional(),
     GROQ_API_KEY: z.string(),
     NODE_ENV: z
       .enum(["development", "test", "production"])
@@ -31,7 +28,7 @@ export const env = createEnv({
     NEXT_PUBLIC_VIDEOSDK_API_KEY: z.string(),
     NEXT_PUBLIC_PROGRAM_ID: z.string(),
     NEXT_PUBLIC_IDRX_MINT: z.string(),
-    NEXT_PUBLIC_SOLANA_RPC_URL: z.string().url().default("https://api.devnet.solana.com"),
+    NEXT_PUBLIC_SOLANA_RPC_URL: z.string().default("https://api.devnet.solana.com"),
   },
 
   /**
@@ -62,4 +59,11 @@ export const env = createEnv({
    * `SOME_VAR=''` will throw an error.
    */
   emptyStringAsUndefined: true,
+  onValidationError: (errors) => {
+    console.error("Environment variable validation failed:");
+    for (const [key, error] of Object.entries(errors)) {
+      console.error(`  ${key}: ${error}`);
+    }
+    throw new Error("Invalid environment variables");
+  },
 });
