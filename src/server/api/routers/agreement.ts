@@ -199,8 +199,9 @@ export const agreementRouter = createTRPCRouter({
         });
       }
 
-      const user = await ctx.db.user.findUnique({ where: { address: ctx.walletAddress }, select: { id: true } });
-      const approvedBy = user?.id ?? ctx.walletAddress;
+      const user = await ctx.db.user.findUnique({ where: { address: ctx.session.address }, select: { id: true } });
+      if (!user) throw new TRPCError({ code: "UNAUTHORIZED" });
+      const approvedBy = user.id;
 
       const agreement = await ctx.db.purchaseAgreement.update({
         where: { id: input.agreementId },
