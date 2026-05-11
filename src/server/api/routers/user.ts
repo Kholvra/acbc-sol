@@ -6,7 +6,7 @@ export const userRouter = createTRPCRouter({
     .input(updateProfileSchema)
     .mutation(async ({ ctx, input }) => {
       const user = await ctx.db.user.update({
-        where: { address: ctx.walletAddress },
+        where: { address: ctx.session.address },
         data: input,
       });
       return user;
@@ -14,7 +14,7 @@ export const userRouter = createTRPCRouter({
 
   getProfile: protectedProcedure.query(async ({ ctx }) => {
     const user = await ctx.db.user.findUnique({
-      where: { address: ctx.walletAddress },
+      where: { address: ctx.session.address },
       select: {
         id: true,
         name: true,

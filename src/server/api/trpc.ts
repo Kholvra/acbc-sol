@@ -3,13 +3,31 @@ import superjson from "superjson";
 import { ZodError } from "zod";
 
 import { db } from "~/server/db";
+import { verifyToken, type SessionPayload } from "~/server/auth";
+
+function parseCookieHeader(cookie: string): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const part of cookie.split(";")) {
+    const eq = part.indexOf("=");
+    if (eq === -1) continue;
+    const key = part.slice(0, eq).trim();
+    const value = part.slice(eq + 1).trim();
+    if (key) result[key] = value;
+  }
+  return result;
+}
+
+export type TRPCSession = SessionPayload;
 
 export const createTRPCContext = async (opts: { headers: Headers }) => {
-  const walletAddress = opts.headers.get("x-wallet-address") ?? null;
+  const cookieHeader = opts.headers.get("cookie") ?? "";
+  const cookies = parseCookieHeader(cookieHeader);
+  const sessionToken = cookies.session;
+  const session = sessionToken ? await verifyToken(sessionToken) : null;
 
   return {
     db,
-    walletAddress,
+    session,
     ...opts,
   };
 };
@@ -53,12 +71,12 @@ export const publicProcedure = t.procedure.use(timingMiddleware);
 export const protectedProcedure = t.procedure
   .use(timingMiddleware)
   .use(({ ctx, next }) => {
-    if (!ctx.walletAddress) {
+    if (!ctx.session) {
       throw new TRPCError({ code: "UNAUTHORIZED" });
     }
     return next({
       ctx: {
-        walletAddress: ctx.walletAddress,
+        session: ctx.session,
       },
     });
   });
@@ -66,7 +84,8 @@ export const protectedProcedure = t.procedure
 export const adminProcedure = protectedProcedure.use(
   async ({ ctx, next }) => {
     const user = await ctx.db.user.findUnique({
-      where: { address: ctx.walletAddress },
+      where: { address: ctx.session.address },
+      select: { role: true },
     });
     if (user?.role !== "ADMIN") {
       throw new TRPCError({

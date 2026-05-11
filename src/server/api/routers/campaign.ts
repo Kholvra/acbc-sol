@@ -6,14 +6,14 @@ import {
 } from "~/server/api/schemas/campaign.schema";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../trpc";
 
-async function getUserByAddress(db: typeof import("~/server/db").db, walletAddress: string) {
-  const user = await db.user.findUnique({ where: { address: walletAddress }, select: { id: true, role: true } });
+async function getUserByAddress(db: typeof import("~/server/db").db, address: string) {
+  const user = await db.user.findUnique({ where: { address }, select: { id: true, role: true } });
   if (!user) return null;
   return user;
 }
 
 const campaignerProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  const user = await getUserByAddress(ctx.db, ctx.walletAddress);
+  const user = await getUserByAddress(ctx.db, ctx.session.address);
   if (!user || user.role !== "CAMPAIGNER") {
     throw new TRPCError({
       code: "FORBIDDEN",
@@ -27,7 +27,7 @@ export const campaignRouter = createTRPCRouter({
   createCampaign: campaignerProcedure
     .input(createCampaignSchema)
     .mutation(async ({ ctx, input }) => {
-      const user = await getUserByAddress(ctx.db, ctx.walletAddress);
+      const user = await getUserByAddress(ctx.db, ctx.session.address);
       const userId = user!.id;
       const { items, onChainAddress, campaignId, ...campaignData } = input;
 
@@ -135,7 +135,7 @@ export const campaignRouter = createTRPCRouter({
   }),
 
   getMyCampaigns: protectedProcedure.query(async ({ ctx }) => {
-    const user = await getUserByAddress(ctx.db, ctx.walletAddress);
+    const user = await getUserByAddress(ctx.db, ctx.session.address);
     if (!user) return [];
     return ctx.db.campaign.findMany({
       where: { creatorId: user.id },
@@ -156,7 +156,7 @@ export const campaignRouter = createTRPCRouter({
   updateCampaign: protectedProcedure
     .input(updateCampaignSchema)
     .mutation(async ({ ctx, input }) => {
-      const user = await getUserByAddress(ctx.db, ctx.walletAddress);
+      const user = await getUserByAddress(ctx.db, ctx.session.address);
       if (!user) throw new TRPCError({ code: "UNAUTHORIZED" });
 
       const { campaignId, ...data } = input;
@@ -175,7 +175,6 @@ export const campaignRouter = createTRPCRouter({
       if (campaign.creatorId !== user.id) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
-      // === updateCampaign
       const updateData = {
         ...data,
         endDate: data.endDate ? new Date(data.endDate) : undefined,
@@ -192,7 +191,7 @@ export const campaignRouter = createTRPCRouter({
   deleteCampaign: protectedProcedure
     .input(campaignIdSchema)
     .mutation(async ({ ctx, input }) => {
-      const user = await getUserByAddress(ctx.db, ctx.walletAddress);
+      const user = await getUserByAddress(ctx.db, ctx.session.address);
       if (!user) throw new TRPCError({ code: "UNAUTHORIZED" });
 
       const campaign = await ctx.db.campaign.findUnique({

@@ -1,9 +1,8 @@
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useWallet } from '@solana/wallet-adapter-react';
-import { useRouter } from 'next/navigation';
 import { LogOut } from 'lucide-react';
 
 type WalletWrapperProps = {
@@ -12,22 +11,16 @@ type WalletWrapperProps = {
   withWalletAggregator?: boolean;
 };
 
-declare global {
-  var __WALLET_ADDRESS__: string | undefined;
-}
-
 export default function WalletWrapper({ className, text }: WalletWrapperProps) {
   const { connected, publicKey, disconnect } = useWallet();
-  const router = useRouter();
-
-  useEffect(() => {
-    globalThis.__WALLET_ADDRESS__ = connected && publicKey ? publicKey.toBase58() : undefined;
-  }, [connected, publicKey]);
 
   const handleDisconnect = async () => {
     await disconnect();
-    globalThis.__WALLET_ADDRESS__ = undefined;
-    location.reload();
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      location.reload();
+    }
   };
 
   return (

@@ -7,7 +7,7 @@ export const env = createEnv({
    * isn't built with invalid env vars.
    */
   server: {
-    AUTH_SECRET: z.string().optional(),
+    AUTH_SECRET: z.string(),
     DATABASE_URL: z.string().optional(),
     DIRECT_URL: z.string().optional(),
     GROQ_API_KEY: z.string().optional(),
